@@ -4,16 +4,26 @@
   "version": "1.0.0",
   "description": "JS & WASM bindings to the ergo-lib rust library",
   "scripts": {
-    "build": "echo 'TODO build'",
+    "build": "yarn workspace @ergoplatform/merkle-tree build",
     "pkg-version": "changeset version",
-    "release": "yarn build && changeset publish"
+    "release": "yarn build && changeset publish",
+    "test": "yarn jest"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ergoplatform/ergo-lib-wasm.git"
   },
   "license": "CC0-1.0",
+  "workspaces": [
+    "packages/*"
+  ],
   "dependencies": {
     "@changesets/cli": "^2.26.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.2.4",
+    "jest": "^29.3.1",
+    "ts-jest": "^29.0.3",
+    "typescript": "^4.9.4"
   }
 }
