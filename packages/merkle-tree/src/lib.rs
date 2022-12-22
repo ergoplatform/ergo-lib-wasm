@@ -4,13 +4,12 @@ use std::convert::TryInto;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-/// A MerkleProof type. Given leaf data and levels (bottom-upwards), the root hash can be computed and validated
-pub struct MerkleProof(pub(crate) ergo_merkle_tree::MerkleProof);
-
-#[wasm_bindgen]
 #[repr(C)]
+/// Node Side in Merkle Tree
 pub enum NodeSide {
+    /// Node is on the left side of the current level
     Left = 0,
+    /// Node is on the right side of the current level
     Right = 1,
 }
 
@@ -58,6 +57,10 @@ impl LevelNode {
 }
 
 #[wasm_bindgen]
+/// A MerkleProof type. Given leaf data and levels (bottom-upwards), the root hash can be computed and validated
+pub struct MerkleProof(pub(crate) ergo_merkle_tree::MerkleProof);
+
+#[wasm_bindgen]
 impl MerkleProof {
     /// Creates a new merkle proof with given leaf data and level data (bottom-upwards)
     /// You can verify it against a Blakeb256 root hash by using [`Self::valid()`]
@@ -75,7 +78,7 @@ impl MerkleProof {
     }
 
     /// Validates the Merkle proof against the root hash
-    #[wasm_bindgen(getter, js_name = isValid)]
+    #[wasm_bindgen(js_name = isValid)]
     pub fn valid(&self, expected_root: &[u8]) -> bool {
         self.0.valid(expected_root)
     }
@@ -89,7 +92,7 @@ pub struct BatchMerkleProof(ergo_merkle_tree::BatchMerkleProof);
 #[wasm_bindgen]
 impl BatchMerkleProof {
     /// Calculates root hash for [`BatchMerkleProof`] and compares it against expected root hash
-    #[wasm_bindgen(getter, js_name = isValid)]
+    #[wasm_bindgen(js_name = isValid)]
     pub fn valid(&self, expected_root: &[u8]) -> bool {
         self.0.valid(expected_root)
     }
