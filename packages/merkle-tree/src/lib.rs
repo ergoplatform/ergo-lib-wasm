@@ -75,6 +75,7 @@ impl MerkleProof {
     }
 
     /// Validates the Merkle proof against the root hash
+    #[wasm_bindgen(getter, js_name = isValid)]
     pub fn valid(&self, expected_root: &[u8]) -> bool {
         self.0.valid(expected_root)
     }
@@ -88,6 +89,7 @@ pub struct BatchMerkleProof(ergo_merkle_tree::BatchMerkleProof);
 #[wasm_bindgen]
 impl BatchMerkleProof {
     /// Calculates root hash for [`BatchMerkleProof`] and compares it against expected root hash
+    #[wasm_bindgen(getter, js_name = isValid)]
     pub fn valid(&self, expected_root: &[u8]) -> bool {
         self.0.valid(expected_root)
     }
