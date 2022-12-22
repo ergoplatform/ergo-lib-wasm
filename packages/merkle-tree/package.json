@@ -1,0 +1,25 @@
+{
+  "name": "@ergoplatform/merkle-tree",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "build": "npm run build:node && npm run build:esm && npm run build:browser",
+    "build:esm": "wasm-pack build --target bundler --release --out-dir dist/esm",
+    "build:node": "wasm-pack build --target nodejs --release --out-dir dist/node",
+    "build:browser": "wasm-pack build --target web --release --out-dir dist/browser",
+    "test": "wasm-pack test --firefox && mocha tests"
+  },
+  "files": [
+    "dist/**/*",
+    "!dist/**/.gitignore",
+    "!dist/**/package.json",
+    "!dist/**/README.md",
+    "package.json",
+    "README.md"
+  ],
+  "main": "dist/node/merkle_tree_wasm.js",
+  "module": "dist/esm/merkle_tree_wasm.js",
+  "types": "dist/node/merkle_tree_wasm.d.ts",
+  "sideEffects": false,
+  "license": "CC0-1.0"
+}
