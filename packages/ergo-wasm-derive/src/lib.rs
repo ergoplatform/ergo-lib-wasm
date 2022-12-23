@@ -340,14 +340,14 @@ pub fn derive_try_vec_to_js_array(input: TokenStream) -> TokenStream {
         pub trait #trait_name {
             type ReturnType;
 
-            fn try_into_js_array(self) -> Result<Self::ReturnType, JsValue>;
-            fn try_as_js_array(&self) -> Result<Self::ReturnType, JsValue>;
+            fn try_into_js_array(self) -> Result<Self::ReturnType, ::wasm_bindgen::JsValue>;
+            fn try_as_js_array(&self) -> Result<Self::ReturnType, ::wasm_bindgen::JsValue>;
         }
 
         impl #trait_name for Vec<#name> {
             type ReturnType = #return_type;
 
-            fn try_into_js_array(self) -> Result<Self::ReturnType, JsValue> {
+            fn try_into_js_array(self) -> Result<Self::ReturnType, ::wasm_bindgen::JsValue> {
                 Ok(self
                     .into_iter()
                     .map(::wasm_bindgen::JsValue::from)
@@ -355,7 +355,7 @@ pub fn derive_try_vec_to_js_array(input: TokenStream) -> TokenStream {
                     .unchecked_into::<Self::ReturnType>())
             }
 
-            fn try_as_js_array(&self) -> Result<Self::ReturnType, JsValue> {
+            fn try_as_js_array(&self) -> Result<Self::ReturnType, ::wasm_bindgen::JsValue> {
                 Ok(self
                     .iter()
                     .map(|f| ::wasm_bindgen::JsValue::from(f.clone()))
@@ -442,13 +442,13 @@ pub fn derive_try_js_array_to_vec(input: TokenStream) -> TokenStream {
         pub trait #trait_name {
             type ReturnType;
 
-            fn try_as_vec(&self) -> Result<Vec<Self::ReturnType>, JsValue>;
+            fn try_as_vec(&self) -> Result<Vec<Self::ReturnType>, ::wasm_bindgen::JsValue>;
         }
 
         impl #trait_name for &#array_type {
             type ReturnType = #name;
 
-            fn try_as_vec(&self) -> Result<Vec<Self::ReturnType>, JsValue> {
+            fn try_as_vec(&self) -> Result<Vec<Self::ReturnType>, ::wasm_bindgen::JsValue> {
                 let js_array: &::js_sys::Array = self.dyn_ref().unwrap();
                 let length: usize = js_array.length().try_into().unwrap();
                 let mut rust_vec = Vec::<Self::ReturnType>::with_capacity(length);
