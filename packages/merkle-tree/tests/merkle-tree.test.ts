@@ -1,4 +1,4 @@
-import { LevelNode, MerkleProof } from "../";
+import { LevelNode, MerkleProof, WasmTestStruct, WasmVecStruct } from "../";
 
 function hexToBytes(hexStr: string): Uint8Array {
   return Uint8Array.from(
@@ -23,9 +23,18 @@ describe("MerkleProof", () => {
       );
 
       const proof = new MerkleProof(txId);
+      const proof2 = MerkleProof.new_with_nodes(txId, [levelNodes]);
       proof.addNode(levelNodes);
 
+      const levels3 = [levelNodes];
+      console.log(levels3);
+      const levels2 = MerkleProof.test_arrays(levels3);
+
+      console.log(levels2);
+      console.log(levels3);
+      expect(levels2.length).toBe(1);
       expect(proof.isValid(txRoot)).toBe(true);
+      expect(proof2.isValid(txRoot)).toBe(true);
     });
   });
 });
