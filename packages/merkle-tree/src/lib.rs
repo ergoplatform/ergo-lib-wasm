@@ -1,4 +1,3 @@
-extern crate alloc;
 use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec, TryVecToJsArray};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
@@ -79,11 +78,6 @@ impl MerkleProof {
     #[wasm_bindgen(constructor)]
     pub fn new(leaf_data: &[u8]) -> MerkleProof {
         Self(ergo_merkle_tree::MerkleProof::new(leaf_data, &[])) // There are issues with wasm when trying to pass an array of structs, so it's better to use add_node instead
-    }
-
-    pub fn test_arrays(js_levels: &LevelNodeArray) -> LevelNodeArray {
-        let typed_array: Vec<LevelNode> = js_levels.try_as_vec().unwrap();
-        typed_array.try_into_js_array().unwrap()
     }
 
     /// Adds a new node to the MerkleProof above the current nodes

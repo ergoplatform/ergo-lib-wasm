@@ -1,115 +1,4 @@
-/*!
-This is a specialized crate exporting a derive macro [`TryFromJsValue`]
-that serves as a basis for workarounds for some lapses of functionality in
-[`wasm-bindgen`](https://crates.io/crates/wasm-bindgen).
-
-
-## Optional arguments
-
-`wasm-bindgen` supports method arguments of the form `Option<T>`,
-where `T` is an exported type, but it has an unexpected side effect on the JS side:
-the value passed to a method this way gets consumed (mimicking Rust semantics).
-See [this issue](https://github.com/rustwasm/wasm-bindgen/issues/2370).
-`Option<&T>` is not currently supported, but an equivalent behavior can be implemented manually.
-
-```
-use js_sys::Error;
-use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
-use wasm_bindgen_derive::TryFromJsValue;
-
-// Derive `TryFromJsValue` for the target structure (note that it has to come
-// before the `[#wasm_bindgen]` attribute, and requires `Clone`):
-#[derive(TryFromJsValue)]
-#[wasm_bindgen]
-#[derive(Clone)]
-struct MyType(usize);
-
-// To have a correct typing annotation generated for TypeScript, declare a custom type.
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(typescript_type = "MyType | null")]
-    pub type OptionMyType;
-}
-
-// Use this type in the function signature.
-pub fn foo(value: &OptionMyType) -> Result<usize, Error> {
-    let js_value: &JsValue = value.as_ref();
-    let typed_value: Option<MyType> = if js_value.is_null() {
-        None
-    } else {
-        Some(MyType::try_from(js_value).map_err(|err| Error::new(&err))?)
-    };
-    // Use the typed value
-    Ok(typed_value.map(|value| value.0).unwrap_or_default())
-}
-```
-
-## Vector arguments
-
-`wasm-bindgen` currently does not support vector arguments with elements having an exported type.
-See [this issue](https://github.com/rustwasm/wasm-bindgen/issues/111),
-which, although it is mainly about returning vectors, will probably allow taking vectors too
-when fixed.
-
-The workaround is similar to that for the optional arguments, with one step added,
-where we try to cast the [`JsValue`](`wasm_bindgen::JsValue`) into [`Array`](`js_sys::Array`).
-The following example also shows how to return an array with elements having an exported type.
-
-```
-use js_sys::Error;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
-use wasm_bindgen_derive::TryFromJsValue;
-
-#[derive(TryFromJsValue)]
-#[wasm_bindgen]
-#[derive(Clone)]
-struct MyType(usize);
-
-// To have a correct typing annotation generated for TypeScript, declare a custom type.
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(typescript_type = "MyType[]")]
-    pub type MyTypeArray;
-}
-
-// Use this type in the function signature.
-pub fn foo(val: &MyTypeArray) -> Result<MyTypeArray, Error> {
-
-    // Unpack the array
-
-    let js_val: &JsValue = val.as_ref();
-    if !js_sys::Array::is_array(js_val) {
-        return Err(Error::new("The argument must be an array"));
-    }
-    let array = js_sys::Array::from(js_val);
-    let length: usize = array.length().try_into().map_err(|err| Error::new(&format!("{}", err)))?;
-    let mut typed_array = Vec::<MyType>::with_capacity(length);
-    for js in array.iter() {
-        let typed_elem = MyType::try_from(&js).map_err(|err| Error::new(&err))?;
-        typed_array.push(typed_elem);
-    }
-
-    // Now we have `typed_array: Vec<MyType>`.
-
-    // Return the array
-
-    Ok(typed_array
-        .into_iter()
-        .map(JsValue::from)
-        .collect::<js_sys::Array>()
-        .unchecked_into::<MyTypeArray>())
-}
-```
-*/
-#![doc(html_root_url = "https://docs.rs/wasm-bindgen-derive")]
-#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
-
-extern crate alloc;
-
-use alloc::format;
-use alloc::string::ToString;
-
+//! Macros to help with missing functionality in `wasm_bindgen`.
 use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
@@ -124,19 +13,122 @@ macro_rules! derive_error {
     };
 }
 
-/** Derives a `TryFrom<&JsValue>` for a type exported using `#[wasm_bindgen]`.
-
-Note that:
-* this derivation must be be positioned before `#[wasm_bindgen]`;
-* the type must implement [`Clone`].
-* `extern crate alloc` must be declared in scope.
-
-The macro is authored by [**@AlexKorn**](https://github.com/AlexKorn)
-based on the idea of [**@aweinstock314**](https://github.com/aweinstock314).
-See [this](https://github.com/rustwasm/wasm-bindgen/issues/2231#issuecomment-656293288)
-and [this](https://github.com/rustwasm/wasm-bindgen/issues/2231#issuecomment-1169658111)
-GitHub comments.
-*/
+/// Implementation of [`TryFromJsValue`] mirrored from here [`wasm-bindgen-derive`](https://github.com/fjarri/wasm-bindgen-derive/blob/master/src/lib.rs)
+/// It serves as a basis for workarounds for some lapses of functionality in [`wasm-bindgen`](https://crates.io/crates/wasm-bindgen).
+///
+/// [`TryFromJsValue`] is needed to lift `JsValue` types into their `#[wasm_bindgen]` counter-parts. This is needed particularly for
+/// working with accepting & returning arrays of wasm types across the JS <-> Rust boundary.
+///
+/// Derives a `TryFrom<&JsValue>` for a type exported using `#[wasm_bindgen]`.
+///
+/// Note that:
+///  - this derivation must be be positioned before `#[wasm_bindgen]`;
+///  - the type must implement [`Clone`].
+///
+/// The macro is authored by [**@AlexKorn**](https://github.com/AlexKorn)
+/// based on the idea of [**@aweinstock314**](https://github.com/aweinstock314).
+/// See [this](https://github.com/rustwasm/wasm-bindgen/issues/2231#issuecomment-656293288)
+/// and [this](https://github.com/rustwasm/wasm-bindgen/issues/2231#issuecomment-1169658111)
+/// GitHub comments.
+///
+/// ## Optional arguments
+///
+/// `wasm-bindgen` supports method arguments of the form `Option<T>`,
+/// where `T` is an exported type, but it has an unexpected side effect on the JS side:
+/// the value passed to a method this way gets consumed (mimicking Rust semantics).
+/// See [this issue](https://github.com/rustwasm/wasm-bindgen/issues/2370).
+/// `Option<&T>` is not currently supported, but an equivalent behavior can be implemented manually.
+///
+/// ```
+/// use js_sys::Error;
+/// use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
+/// use ergo_wasm_derive::TryFromJsValue;
+///
+/// // Derive `TryFromJsValue` for the target structure (note that it has to come
+/// // before the `[#wasm_bindgen]` attribute, and requires `Clone`):
+/// #[derive(TryFromJsValue)]
+/// #[wasm_bindgen]
+/// #[derive(Clone)]
+/// struct MyType(usize);
+///
+/// // To have a correct typing annotation generated for TypeScript, declare a custom type.
+/// #[wasm_bindgen]
+/// extern "C" {
+///     #[wasm_bindgen(typescript_type = "MyType | null")]
+///     pub type OptionMyType;
+/// }
+///
+/// // Use this type in the function signature.
+/// pub fn foo(value: &OptionMyType) -> Result<usize, JsValue> {
+///     let js_value: &JsValue = value.as_ref();
+///     let typed_value: Option<MyType> = if js_value.is_null() {
+///         None
+///     } else {
+///         MyType::try_from(js_value).ok()
+///     };
+///
+///     // Use the typed value
+///     Ok(typed_value.map(|value| value.0).unwrap_or_default())
+/// }
+/// ```
+///
+/// ## Vector arguments
+///
+/// `wasm-bindgen` currently does not support vector arguments with elements having an exported type.
+/// See [this issue](https://github.com/rustwasm/wasm-bindgen/issues/111),
+/// which, although it is mainly about returning vectors, will probably allow taking vectors too
+/// when fixed.
+///
+/// The workaround is similar to that for the optional arguments, with one step added,
+/// where we try to cast the [`JsValue`](`wasm_bindgen::JsValue`) into [`Array`](`js_sys::Array`).
+/// The following example also shows how to return an array with elements having an exported type.
+///
+/// ```
+/// use js_sys::Error;
+/// use wasm_bindgen::JsCast;
+/// use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
+/// use ergo_wasm_derive::TryFromJsValue;
+///
+/// #[derive(TryFromJsValue)]
+/// #[wasm_bindgen]
+/// #[derive(Clone)]
+/// pub struct MyType(usize);
+///
+/// // To have a correct typing annotation generated for TypeScript, declare a custom type.
+/// #[wasm_bindgen]
+/// extern "C" {
+///     #[wasm_bindgen(typescript_type = "MyType[]")]
+///     pub type MyTypeArray;
+/// }
+///
+/// // Use this type in the function signature.
+/// pub fn foo(val: &MyTypeArray) -> Result<MyTypeArray, Error> {
+///
+///    // Unpack the array
+///
+///     let js_val: &JsValue = val.as_ref();
+///     if !js_sys::Array::is_array(js_val) {
+///         return Err(Error::new("The argument must be an array"));
+///     }
+///     let array = js_sys::Array::from(js_val);
+///     let length: usize = array.length().try_into().map_err(|err| Error::new(&format!("{}", err)))?;
+///     let mut typed_array = Vec::<MyType>::with_capacity(length);
+///     for js in array.iter() {
+///         let typed_elem = MyType::try_from(&js)?;
+///         typed_array.push(typed_elem);
+///     }
+///
+///     // Now we have `typed_array: Vec<MyType>`.
+///
+///     // Return the array
+///
+///     Ok(typed_array
+///         .into_iter()
+///         .map(JsValue::from)
+///         .collect::<js_sys::Array>()
+///         .unchecked_into::<MyTypeArray>())
+/// }
+/// ```
 #[proc_macro_derive(TryFromJsValue)]
 pub fn derive_try_from_jsvalue(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -209,7 +201,6 @@ pub fn derive_try_from_jsvalue(input: TokenStream) -> TokenStream {
         impl #name {
             #[wasm_bindgen(js_name = "__getClassname")]
             pub fn __js_get_classname(&self) -> String {
-                use ::alloc::borrow::ToOwned;
                 ::core::stringify!(#name).to_owned()
             }
         }
@@ -218,8 +209,6 @@ pub fn derive_try_from_jsvalue(input: TokenStream) -> TokenStream {
             type Error = ::wasm_bindgen::JsValue;
 
             fn try_from(js: &::wasm_bindgen::JsValue) -> Result<Self, Self::Error> {
-                use ::alloc::borrow::ToOwned;
-                use ::alloc::string::ToString;
                 use ::wasm_bindgen::JsCast;
                 use ::wasm_bindgen::convert::RefFromWasmAbi;
 
@@ -280,6 +269,42 @@ struct TryVecToJsArrayOpts {
     array_type: syn::Ident,
 }
 
+/// Derive `TryVecToJsArray` that provides methods to convert a Rust `Vec` of wasm binded structures to `JsValue`.
+///
+/// This is needed to return arrays of structs from Rust to JavaScript.
+///
+/// `TryVecToJsArray` depends on the following derives and attributes:
+///  * The struct derives [`TryFromJsValue`]
+///  * The struct defines the attribute `#[ergo(array_type = "StructArrayType")]
+///  * `#[wasm_bindgen`] is specified AFTER the previously mentioned points
+///  * The struct derives [`Clone`]
+///
+/// ```
+/// use js_sys::Error;
+/// use wasm_bindgen::JsCast;
+/// use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
+/// use ergo_wasm_derive::{TryFromJsValue, TryVecToJsArray};
+///
+/// #[wasm_bindgen]
+/// extern "C" {
+///     #[wasm_bindgen(typescript_type = "MyType[]")]
+///     pub type MyTypeArray;
+/// }
+///
+/// #[derive(TryFromJsValue, TryVecToJsArray)]
+/// #[ergo(array_type = "MyTypeArray")]
+/// #[wasm_bindgen]
+/// #[derive(Clone)]
+/// pub struct MyType(pub usize);
+///
+/// // Use this type in the function signature.
+/// #[wasm_bindgen]
+/// pub fn foo() -> Result<MyTypeArray, JsValue> {
+///     let my_vec = vec![MyType(4), MyType(1), MyType(3)];
+///
+///     my_vec.try_into_js_array()
+/// }
+/// ```
 #[proc_macro_derive(TryVecToJsArray, attributes(ergo))]
 pub fn derive_try_vec_to_js_array(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -307,7 +332,7 @@ pub fn derive_try_vec_to_js_array(input: TokenStream) -> TokenStream {
         );
     }
 
-    let trait_name = format_ident!("__{}__TryToJsArray", name);
+    let trait_name = format_ident!("__ergo__{}__TryToJsArray", name);
     let return_type = format_ident!("{}", attrs.array_type);
 
     let expanded = quote! {
@@ -343,6 +368,45 @@ pub fn derive_try_vec_to_js_array(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+/// Derive `TryJsArrayToVec` that provides methods to convert a `JsValue` (where the underlying JS type is an Array) to a Vec of rust binded structs.
+///
+/// This is needed to accept arrays of structs from JavaScript to Rust.
+///
+/// `TryJsArrayToVec` depends on the following derives and attributes:
+///  * The struct derives [`TryFromJsValue`]
+///  * The struct defines the attribute `#[ergo(array_type = "StructArrayType")]
+///  * `#[wasm_bindgen`] is specified AFTER the previously mentioned points
+///  * The struct derives [`Clone`]
+///
+/// ```
+/// use js_sys::Error;
+/// use wasm_bindgen::JsCast;
+/// use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
+/// use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec};
+///
+/// #[wasm_bindgen]
+/// extern "C" {
+///     #[wasm_bindgen(typescript_type = "MyType[]")]
+///     pub type MyTypeArray;
+/// }
+///
+/// #[derive(TryFromJsValue, TryJsArrayToVec)]
+/// #[ergo(array_type = "MyTypeArray")]
+/// #[wasm_bindgen]
+/// #[derive(Clone, Debug)]
+/// pub struct MyType(pub usize);
+///
+/// pub fn accept_vec_usize(data: Vec<MyType>) {
+///     println!("{:?}", data);
+/// }
+///
+/// // Use this type in the function signature.
+/// #[wasm_bindgen]
+/// pub fn foo(js_my_type_array: &MyTypeArray) -> Result<(), JsValue> {
+///     accept_vec_usize(js_my_type_array.try_as_vec().unwrap());
+///     Ok(())
+/// }
+/// ```
 #[proc_macro_derive(TryJsArrayToVec, attributes(ergo))]
 pub fn derive_try_js_array_to_vec(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -370,7 +434,7 @@ pub fn derive_try_js_array_to_vec(input: TokenStream) -> TokenStream {
         );
     }
 
-    let trait_name = format_ident!("__{}__TryJsArrayToVec", name);
+    let trait_name = format_ident!("__ergo__{}__TryJsArrayToVec", name);
     let array_type = format_ident!("{}", attrs.array_type);
 
     let expanded = quote! {
