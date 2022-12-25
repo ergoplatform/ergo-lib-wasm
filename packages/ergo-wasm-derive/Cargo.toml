@@ -1,0 +1,15 @@
+[package]
+name = "ergo-wasm-derive"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "1.0"
+quote = "1.0"
+proc-macro2 = "1.0"
+wasm-bindgen = { version = "0.2.83", features = ["serde-serialize"] }
+js-sys = "0.3.51"
+darling = "0.14.2"

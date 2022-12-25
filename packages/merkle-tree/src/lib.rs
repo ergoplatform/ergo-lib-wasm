@@ -1,7 +1,8 @@
+use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec, TryVecToJsArray};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{prelude::*, JsCast};
 
 #[wasm_bindgen]
 #[repr(C)]
@@ -22,7 +23,15 @@ impl From<ergo_merkle_tree::NodeSide> for NodeSide {
     }
 }
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(typescript_type = "LevelNode[]")]
+    pub type LevelNodeArray;
+}
+
 /// A level node in a merkle proof
+#[derive(TryFromJsValue, TryVecToJsArray, TryJsArrayToVec)]
+#[ergo(array_type = "LevelNodeArray")]
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct LevelNode(ergo_merkle_tree::LevelNode);
