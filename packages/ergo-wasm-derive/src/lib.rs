@@ -449,11 +449,10 @@ pub fn derive_try_js_array_to_vec(input: TokenStream) -> TokenStream {
             type ReturnType = #name;
 
             fn try_as_vec(&self) -> Result<Vec<Self::ReturnType>, ::wasm_bindgen::JsValue> {
-                let js_array: &::js_sys::Array = self.dyn_ref().unwrap();
-                let length: usize = js_array.length().try_into().unwrap();
-                let mut rust_vec = Vec::<Self::ReturnType>::with_capacity(length);
+                let js_array: &::js_sys::Array = self.dyn_ref().map_or_else(|| Err(JsValue::from_str("try_as_vec: argument wasn't an array type")), |v| Ok(v))?;
+                let mut rust_vec = Vec::<Self::ReturnType>::with_capacity(js_array.length() as usize);
                 for js in js_array.iter() {
-                    let elem = ::std::convert::TryFrom::try_from(&js).unwrap();
+                    let elem = ::std::convert::TryFrom::try_from(&js)?;
                     rust_vec.push(elem);
                 }
 
