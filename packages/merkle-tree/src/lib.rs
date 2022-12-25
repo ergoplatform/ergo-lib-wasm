@@ -72,9 +72,9 @@ pub struct MerkleProof(pub(crate) ergo_merkle_tree::MerkleProof);
 
 #[wasm_bindgen]
 impl MerkleProof {
-    /// Creates a new merkle proof with given leaf data and level data (bottom-upwards)
+    /// Creates a new merkle proof with given leaf data and level node data (bottom-upwards)
     /// You can verify it against a Blakeb256 root hash by using [`Self::valid()`]
-    /// Add a node by using [`Self::add_node()`]
+    /// Additional nodes can be added with [`Self::add_node()`]
     /// Each digest on the level must be exactly 32 bytes
     #[wasm_bindgen(constructor)]
     pub fn new(leaf_data: &[u8], js_levels: &LevelNodeArray) -> Result<MerkleProof, JsValue> {
