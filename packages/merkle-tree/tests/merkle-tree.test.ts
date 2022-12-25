@@ -22,8 +22,7 @@ describe("MerkleProof", () => {
         "642c15c62553edd8fd9af9a6f754f3c7a6c03faacd0c9b9d5b7d11052c6c6fe8"
       );
 
-      const proof = new MerkleProof(txId);
-      proof.addNode(levelNodes);
+      const proof = new MerkleProof(txId, [levelNodes]);
 
       expect(proof.isValid(txRoot)).toBe(true);
     });

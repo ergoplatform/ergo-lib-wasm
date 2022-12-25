@@ -1,3 +1,4 @@
+use derive_more::{From, Into};
 use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec, TryVecToJsArray};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
@@ -33,7 +34,7 @@ extern "C" {
 #[derive(TryFromJsValue, TryVecToJsArray, TryJsArrayToVec)]
 #[ergo(array_type = "LevelNodeArray")]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From, Into)]
 pub struct LevelNode(ergo_merkle_tree::LevelNode);
 
 #[wasm_bindgen]
@@ -71,13 +72,19 @@ pub struct MerkleProof(pub(crate) ergo_merkle_tree::MerkleProof);
 
 #[wasm_bindgen]
 impl MerkleProof {
-    /// Creates a new merkle proof with given leaf data and level data (bottom-upwards)
+    /// Creates a new merkle proof with given leaf data and level node data (bottom-upwards)
     /// You can verify it against a Blakeb256 root hash by using [`Self::valid()`]
-    /// Add a node by using [`Self::add_node()`]
+    /// Additional nodes can be added with [`Self::add_node()`]
     /// Each digest on the level must be exactly 32 bytes
     #[wasm_bindgen(constructor)]
-    pub fn new(leaf_data: &[u8]) -> MerkleProof {
-        Self(ergo_merkle_tree::MerkleProof::new(leaf_data, &[])) // There are issues with wasm when trying to pass an array of structs, so it's better to use add_node instead
+    pub fn new(leaf_data: &[u8], js_levels: &LevelNodeArray) -> Result<MerkleProof, JsValue> {
+        let levels = js_levels
+            .try_as_vec()?
+            .into_iter()
+            .map(ergo_merkle_tree::LevelNode::from)
+            .collect::<Vec<_>>();
+
+        Ok(Self(ergo_merkle_tree::MerkleProof::new(leaf_data, &levels)))
     }
 
     /// Adds a new node to the MerkleProof above the current nodes
