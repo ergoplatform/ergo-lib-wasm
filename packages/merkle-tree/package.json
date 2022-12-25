@@ -1,6 +1,6 @@
 {
   "name": "@ergoplatform/merkle-tree",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Merkle tree WASM + JS bindings for ergo-lib",
   "scripts": {
     "build": "npm run build:node && npm run build:esm && npm run build:browser",
