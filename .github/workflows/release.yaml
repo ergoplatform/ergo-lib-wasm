@@ -14,22 +14,21 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
-
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-
       - name: Install wasm-pack
         run: cargo install wasm-pack
-
       - name: Setup Node.js 16.x
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-
       - name: Install Dependencies
         run: yarn --frozen-lockfile
-
+      - name: Build
+        run: yarn build
+      - name: Run Tests
+        run: yarn test
       - name: Create Release Pull Request or Publish to npm
         uses: changesets/action@v1
         with:
