@@ -1,0 +1,24 @@
+[package]
+name = "ergo-nipopow-wasm"
+version = "0.1.0"
+authors = ["Denys Zadorozhnyi <denys@zadorozhnyi.com>", "ross-weir"]
+edition = "2021"
+description = "NiPoPoW bindings for ergo-lib"
+repository = "https://github.com/ergoplatform/ergo-lib-wasm"
+license = "CC0-1.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+js-sys = "0.3.60"
+wasm-bindgen = "0.2.63"
+ergo-lib = "0.21.1"
+derive_more = "0.99.17"
+serde-wasm-bindgen = "0.4.5"
+serde = { version = "1.0", features = ["derive"] }
+ergo-wasm-common = { path = "../ergo-wasm-common" }
+ergo-merkle-tree-wasm = { path = "../merkle-tree" }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.13"

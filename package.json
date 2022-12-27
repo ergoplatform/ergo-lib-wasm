@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "JS & WASM bindings to the ergo-lib rust library",
   "scripts": {
-    "build": "yarn workspace @ergoplatform/merkle-tree build",
+    "build": "yarn workspace @ergoplatform/merkle-tree build && yarn workspace @ergoplatform/nipopow build",
     "pkg-version": "changeset version",
     "release": "yarn build && changeset publish",
     "test": "yarn jest"
