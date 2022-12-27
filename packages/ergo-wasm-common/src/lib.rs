@@ -1,4 +1,5 @@
-pub(crate) mod npm;
+pub mod decls;
+pub mod macros;
 
 use wasm_bindgen::JsValue;
 
@@ -15,27 +16,6 @@ where
     }
 }
 
-/// Implement & bind toJSON and fromJSON methods for wasm structs
-#[macro_export]
-macro_rules! impl_json_methods {
-    ($x:ident) => {
-        #[wasm_bindgen]
-        impl $x {
-            /// Converts the instance to JSON
-            #[wasm_bindgen(js_name = toJSON)]
-            pub fn to_json(&self) -> Result<String, ::wasm_bindgen::JsValue> {
-                serde_json::to_string(&self.0).map_err_js_value()
-            }
-
-            /// Creates an instance from JSON
-            #[wasm_bindgen(js_name = fromJSON)]
-            pub fn from_json(json: &str) -> Result<$x, ::wasm_bindgen::JsValue> {
-                serde_json::from_str(json).map_err_js_value()
-            }
-        }
-    };
-}
-
 /// A module that imports commonly used types.
 ///
 /// Typically used in glob form:
@@ -44,6 +24,7 @@ macro_rules! impl_json_methods {
 /// use ergo_wasm_common::prelude::*;
 /// ```
 pub mod prelude {
+    pub use crate::export_typescript_type;
     pub use crate::impl_json_methods;
     pub use crate::npm_import;
     pub use crate::MapJsValueErrorResult;
