@@ -1,8 +1,8 @@
 use derive_more::{From, Into};
+use ergo_wasm_common::prelude::*;
 use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec, TryVecToJsArray};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
-
 use wasm_bindgen::{prelude::*, JsCast};
 
 #[wasm_bindgen]
@@ -105,23 +105,13 @@ impl MerkleProof {
 #[derive(Debug, Clone, Serialize, Deserialize, From, Into)]
 pub struct BatchMerkleProof(ergo_merkle_tree::BatchMerkleProof);
 
+impl_json_methods!(BatchMerkleProof);
+
 #[wasm_bindgen]
 impl BatchMerkleProof {
     /// Calculates root hash for [`BatchMerkleProof`] and compares it against expected root hash
     #[wasm_bindgen(js_name = isValid)]
     pub fn valid(&self, expected_root: &[u8]) -> bool {
         self.0.valid(expected_root)
-    }
-
-    /// Creates a new [`BatchMerkleProof`] from json representation
-    #[wasm_bindgen(js_name = fromJSON)]
-    pub fn from_json(json: JsValue) -> Result<BatchMerkleProof, serde_wasm_bindgen::Error> {
-        serde_wasm_bindgen::from_value(json)
-    }
-
-    /// Converts [`BatchMerkleProof`] to json representation
-    #[wasm_bindgen(js_name = toJSON)]
-    pub fn to_json(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
-        serde_wasm_bindgen::to_value(&self.0)
     }
 }

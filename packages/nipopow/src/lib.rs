@@ -1,32 +1,20 @@
 use derive_more::{From, Into};
-use ergo_merkle_tree_wasm::BatchMerkleProof;
-use ergo_wasm_common::MapJsValueErrorResult;
+use ergo_wasm_common::prelude::*;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(module = "@ergoplatform/merkle-tree")]
-extern "C" {
-    #[wasm_bindgen(typescript_type = "MerkleProof", js_name = "MerkleProof")]
-    pub type MerkleProofTest;
-
-    #[wasm_bindgen(js_name = getProof)] // And here
-    pub fn get_proof() -> MerkleProofTest;
-
-    #[wasm_bindgen(js_name = otherGetProof)] // And here
-    pub fn other_get_proof() -> MerkleProofTest;
-}
+npm_import!("@ergoplatform/merkle-tree");
+npm_import!("@ergoplatform/blockchain");
 
 /// A structure representing NiPoPow proof.
 #[wasm_bindgen]
-#[derive(Debug, From, Into)]
+#[derive(Debug, From, Into, Serialize, Deserialize)]
 pub struct NipopowProof(ergo_lib::ergo_nipopow::NipopowProof);
+
+impl_json_methods!(NipopowProof);
 
 #[wasm_bindgen]
 impl NipopowProof {
-    #[wasm_bindgen]
-    pub fn test_proof() -> MerkleProofTest {
-        get_proof()
-    }
-
     /// Implementation of the ≥ algorithm from [`KMZ17`], see Algorithm 4
     ///
     /// [`KMZ17`]: https://fc20.ifca.ai/preproceedings/74.pdf
@@ -40,18 +28,37 @@ impl NipopowProof {
     pub fn suffix_head(&self) -> PoPowHeader {
         self.0.suffix_head.clone().into()
     }
+}
 
-    /// Converts the instance to a JSON object
-    #[wasm_bindgen(js_name = toJSON)]
-    pub fn to_json(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
-        serde_wasm_bindgen::to_value(&self.0)
+/// A verifier for PoPoW proofs. During its lifetime, it processes many proofs with the aim of
+/// deducing at any given point what is the best (sub)chain rooted at the specified genesis.
+#[wasm_bindgen]
+#[derive(Debug, From, Into)]
+pub struct NipopowVerifier(ergo_lib::ergo_nipopow::NipopowVerifier);
+
+#[wasm_bindgen]
+impl NipopowVerifier {
+    /// Create new instance
+    #[wasm_bindgen(constructor)]
+    pub fn new(genesis_block_id: &BlockId) -> NipopowVerifier {
+        todo!()
+        // ergo_lib::ergo_nipopow::NipopowVerifier::new(genesis_block_id.clone()).into()
     }
 
-    /// Parse from JSON
-    /// supports Ergo Node/Explorer API and box values and token amount encoded as strings
-    #[wasm_bindgen(js_name = fromJSON)]
-    pub fn from_json(json: JsValue) -> Result<NipopowProof, serde_wasm_bindgen::Error> {
-        serde_wasm_bindgen::from_value::<ergo_lib::ergo_nipopow::NipopowProof>(json).map(Self::from)
+    /// Return best proof
+    #[wasm_bindgen(getter, js_name = bestProof)]
+    pub fn best_proof(&self) -> Option<NipopowProof> {
+        self.0.best_proof().map(NipopowProof)
+    }
+
+    // /// Returns chain of `BlockHeader`s from the best proof.
+    // pub fn best_chain(&self) -> BlockHeaders {
+    //     BlockHeaders(self.0.best_chain().into_iter().map(|h| h.into()).collect())
+    // }
+
+    /// Process given proof
+    pub fn process(&mut self, new_proof: NipopowProof) -> Result<(), JsValue> {
+        self.0.process(new_proof.0).map_err_js_value()
     }
 }
 
@@ -62,10 +69,10 @@ pub struct PoPowHeader(ergo_lib::ergo_nipopow::PoPowHeader);
 
 #[wasm_bindgen]
 impl PoPowHeader {
-    /// Returns interlinks proof [`crate::batchmerkleproof::BatchMerkleProof`]
-    pub fn interlinks_proof(&self) -> BatchMerkleProof {
-        // self.0.interlinks_proof
-        self.0.interlinks_proof.clone().into()
+    pub fn interlinks_proof(&self) -> Result<BatchMerkleProof, JsValue> {
+        Ok(BatchMerkleProof::from_json(
+            serde_json::to_string(&self.0.interlinks_proof).map_err_js_value()?,
+        ))
     }
 
     /// Validates interlinks merkle root with compact merkle multiproof. See [`PoPowHeader::interlinks_proof`] for BatchMerkleProof access
