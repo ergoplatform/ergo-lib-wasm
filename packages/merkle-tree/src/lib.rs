@@ -102,7 +102,7 @@ impl MerkleProof {
 
 /// BatchMerkleProof type to validate root hash for multiple nodes
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, From, Into)]
 pub struct BatchMerkleProof(ergo_merkle_tree::BatchMerkleProof);
 
 #[wasm_bindgen]
