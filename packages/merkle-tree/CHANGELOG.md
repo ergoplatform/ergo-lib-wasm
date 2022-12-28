@@ -1,5 +1,11 @@
 # @ergoplatform/merkle-tree
 
+## 0.1.1
+
+### Patch Changes
+
+- 694ec95: `BatchMerkleProof` json conversion now uses serde_json & strings
+
 ## 0.1.0
 
 ### Minor Changes
