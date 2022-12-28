@@ -2,21 +2,23 @@
 
 WASM and JS/TS bindings for [`sigma-rust`](https://github.com/ergoplatform/sigma-rust).
 
-We are currently working on migrating from the monolithic bindings/packages located [here](https://github.com/ergoplatform/sigma-rust/tree/develop/bindings/ergo-lib-wasm), you can see our progress [below](#published-crates).
+We are currently working on migrating from the bindings/packages located [here](https://github.com/ergoplatform/sigma-rust/tree/develop/bindings/ergo-lib-wasm) and performing the first major upgrade of `ergo-lib-wasm`, you can see our progress [below](#ergo-lib-wasm).
 
 ## Repository setup
 
-### Published Crates
+### ergo-lib-wasm
 
-The following crates contain bindings to specific `sigma-rust` functionality and are published to NPM.
+This is the main wasm crate providing bindings to `sigma-rust` and is published to NPM under the [`@ergoplatform/ergo-lib-wasm`](TODO) package.
 
-| Crate | Description | NPM | Migrated? |
-| --- | --- | --- | --- |
-| [`merkle-tree`](packages/merkle-tree) | Library for working with merkle trees | [`@ergoplatform/merkle-tree`](https://www.npmjs.com/package/@ergoplatform/merkle-tree) | ✅
+The following functionality has been migrated:
+
+| Description | Migrated? |
+| --- |:---:|
+| Merkle tree functionality | ✅
 
 ### Internal Crates
 
-This repository contains a few utility crates that are used throughout the monorepo but not published.
+This repository contains a few utility crates that are used throughout the repository but are not published.
 
 | Crate | Description |
 | --- | --- |

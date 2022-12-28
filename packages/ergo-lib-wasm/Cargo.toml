@@ -1,11 +1,10 @@
 [package]
-name = "ergo-merkle-tree-wasm"
+name = "ergo-lib-wasm"
 version = "0.1.0"
 authors = ["Denys Zadorozhnyi <denys@zadorozhnyi.com>", "ross-weir"]
 edition = "2021"
-description = "Merkle tree WASM + JS bindings for ergo-lib"
+description = "WASM + JS bindings for ergo-lib"
 repository = "https://github.com/ergoplatform/ergo-lib-wasm"
-license = "CC0-1.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

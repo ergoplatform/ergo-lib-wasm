@@ -4,7 +4,7 @@ use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec, TryVecToJsArray};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[repr(C)]
@@ -75,7 +75,7 @@ pub struct MerkleProof(pub(crate) ergo_merkle_tree::MerkleProof);
 impl MerkleProof {
     /// Creates a new merkle proof with given leaf data and level node data (bottom-upwards)
     /// You can verify it against a Blakeb256 root hash by using {@link MerkleProof.isValid}
-    /// Additional nodes can be added with [`Self::add_node()`]
+    /// Additional nodes can be added with {@link MerkleProof.addNode}
     /// Each digest on the level must be exactly 32 bytes
     #[wasm_bindgen(constructor)]
     pub fn new(leaf_data: &[u8], js_levels: &LevelNodeArray) -> Result<MerkleProof, JsValue> {
@@ -102,6 +102,7 @@ impl MerkleProof {
 }
 
 /// BatchMerkleProof type to validate root hash for multiple nodes
+/// Also known as compact merkle multi-proofs
 #[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchMerkleProof(ergo_merkle_tree::BatchMerkleProof);
