@@ -1,0 +1,24 @@
+{
+  "name": "@ergoplatform/ergo-lib-wasm",
+  "version": "0.0.1",
+  "description": "WASM + JS bindings for ergo-lib",
+  "scripts": {
+    "build": "npm run build:node && npm run build:esm && npm run build:browser",
+    "build:esm": "wasm-pack build --target bundler --release --out-dir dist/esm",
+    "build:node": "wasm-pack build --target nodejs --release --out-dir dist/node",
+    "build:browser": "wasm-pack build --target web --release --out-dir dist/browser"
+  },
+  "files": [
+    "dist/**/*",
+    "!dist/**/.gitignore",
+    "!dist/**/package.json",
+    "!dist/**/README.md",
+    "package.json",
+    "README.md"
+  ],
+  "main": "dist/node/ergo_lib_wasm.js",
+  "module": "dist/esm/ergo_lib_wasm.js",
+  "types": "dist/node/ergo_lib_wasm.d.ts",
+  "sideEffects": false,
+  "license": "CC0-1.0"
+}
