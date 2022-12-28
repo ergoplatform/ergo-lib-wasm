@@ -2,7 +2,7 @@
 
 WASM and JS/TS bindings for [`sigma-rust`](https://github.com/ergoplatform/sigma-rust).
 
-We are currently working on migrating from the bindings/packages located [here](https://github.com/ergoplatform/sigma-rust/tree/develop/bindings/ergo-lib-wasm), you can see our progress [below](#ergo-lib-wasm).
+We are currently working on migrating from the bindings/packages located [here](https://github.com/ergoplatform/sigma-rust/tree/develop/bindings/ergo-lib-wasm) and performing the first major upgrade of `ergo-lib-wasm`, you can see our progress [below](#ergo-lib-wasm).
 
 ## Repository setup
 
@@ -12,9 +12,9 @@ This is the main wasm crate providing bindings to `sigma-rust` and is published 
 
 The following functionality has been migrated:
 
-| Functionality | Description | Migrated? |
-| --- | --- |:---:|
-| [`Merkle trees`](packages/ergo-lib-wasm/src/merkle_tree.rs) | Merkle tree functionality | ✅
+| Description | Migrated? |
+| --- |:---:|
+| Merkle tree functionality | ✅
 
 ### Internal Crates
 
