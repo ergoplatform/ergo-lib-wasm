@@ -18,7 +18,7 @@ The following functionality has been migrated:
 
 ### Internal Crates
 
-This repository contains a few utility crates that are used throughout the monorepo but not published.
+This repository contains a few utility crates that are used throughout the repository but are not published.
 
 | Crate | Description |
 | --- | --- |
