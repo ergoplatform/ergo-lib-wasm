@@ -16,11 +16,11 @@ pub enum NodeSide {
     Right = 1,
 }
 
-impl From<ergo_merkle_tree::NodeSide> for NodeSide {
-    fn from(value: ergo_merkle_tree::NodeSide) -> Self {
+impl From<ergo_lib::ergo_merkle_tree::NodeSide> for NodeSide {
+    fn from(value: ergo_lib::ergo_merkle_tree::NodeSide) -> Self {
         match value {
-            ergo_merkle_tree::NodeSide::Left => Self::Left,
-            ergo_merkle_tree::NodeSide::Right => Self::Right,
+            ergo_lib::ergo_merkle_tree::NodeSide::Left => Self::Left,
+            ergo_lib::ergo_merkle_tree::NodeSide::Right => Self::Right,
         }
     }
 }
@@ -36,14 +36,14 @@ extern "C" {
 #[ergo(array_type = "LevelNodeArray")]
 #[wasm_bindgen]
 #[derive(Debug, Clone, From, Into)]
-pub struct LevelNode(ergo_merkle_tree::LevelNode);
+pub struct LevelNode(ergo_lib::ergo_merkle_tree::LevelNode);
 
 #[wasm_bindgen]
 impl LevelNode {
     /// Creates a new LevelNode from a 32 byte hash and side that the node belongs on in the tree. Fails if the digest is not 32 bytes
     #[wasm_bindgen(constructor)]
     pub fn new(hash: &[u8], side: u8) -> Result<LevelNode, JsValue> {
-        Ok(Self(ergo_merkle_tree::LevelNode::new(
+        Ok(Self(ergo_lib::ergo_merkle_tree::LevelNode::new(
             (*hash)
                 .try_into()
                 .map_err(|_| "Digest is not 32 bytes in size")?,
@@ -69,7 +69,7 @@ impl LevelNode {
 
 #[wasm_bindgen]
 /// A MerkleProof type. Given leaf data and levels (bottom-upwards), the root hash can be computed and validated
-pub struct MerkleProof(pub(crate) ergo_merkle_tree::MerkleProof);
+pub struct MerkleProof(pub(crate) ergo_lib::ergo_merkle_tree::MerkleProof);
 
 #[wasm_bindgen]
 impl MerkleProof {
@@ -82,10 +82,12 @@ impl MerkleProof {
         let levels = js_levels
             .try_as_vec()?
             .into_iter()
-            .map(ergo_merkle_tree::LevelNode::from)
+            .map(ergo_lib::ergo_merkle_tree::LevelNode::from)
             .collect::<Vec<_>>();
 
-        Ok(Self(ergo_merkle_tree::MerkleProof::new(leaf_data, &levels)))
+        Ok(Self(ergo_lib::ergo_merkle_tree::MerkleProof::new(
+            leaf_data, &levels,
+        )))
     }
 
     /// Adds a new node to the MerkleProof above the current nodes
@@ -104,8 +106,8 @@ impl MerkleProof {
 /// BatchMerkleProof type to validate root hash for multiple nodes
 /// Also known as compact merkle multi-proofs
 #[wasm_bindgen]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchMerkleProof(ergo_merkle_tree::BatchMerkleProof);
+#[derive(Debug, Clone, Serialize, Deserialize, From, Into)]
+pub struct BatchMerkleProof(ergo_lib::ergo_merkle_tree::BatchMerkleProof);
 
 #[wasm_bindgen]
 impl BatchMerkleProof {

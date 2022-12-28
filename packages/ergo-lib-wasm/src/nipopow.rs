@@ -5,6 +5,8 @@ use ergo_wasm_common::prelude::*;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+use crate::{blockchain::BlockId, merkle_tree::BatchMerkleProof};
+
 /// A structure representing NiPoPow proof.
 #[wasm_bindgen]
 #[derive(Debug, From, Into, Serialize, Deserialize)]
@@ -40,11 +42,15 @@ pub struct NipopowVerifier(ergo_lib::ergo_nipopow::NipopowVerifier);
 
 #[wasm_bindgen]
 impl NipopowVerifier {
-    // /// Create new instance
-    // #[wasm_bindgen(constructor)]
-    // pub fn new(genesis_block_id: BlockId) -> NipopowVerifier {
-    //     ergo_lib::ergo_nipopow::NipopowVerifier::new(genesis_block_id.0).into()
-    // }
+    /// Create new instance
+    #[wasm_bindgen(constructor)]
+    pub fn new(genesis_block_id: BlockId) -> Result<NipopowVerifier, JsValue> {
+        let block_id = ergo_lib::ergo_chain_types::Digest32::try_from(genesis_block_id)
+            .map(|d| ergo_lib::ergo_chain_types::BlockId(d))
+            .map_err_js_value()?;
+
+        Ok(ergo_lib::ergo_nipopow::NipopowVerifier::new(block_id).into())
+    }
 
     /// Return best proof
     #[wasm_bindgen(getter, js_name = bestProof)]
@@ -82,10 +88,11 @@ impl PoPowHeader {
             .map_err(Into::into)
     }
 
-    // /// Returns interlinks proof [`crate::batchmerkleproof::BatchMerkleProof`]
-    // pub fn interlinks_proof(&self) -> crate::batchmerkleproof::BatchMerkleProof {
-    //     crate::batchmerkleproof::BatchMerkleProof(self.0.interlinks_proof.clone())
-    // }
+    /// Returns interlinks proof [`crate::batchmerkleproof::BatchMerkleProof`]
+    #[wasm_bindgen(getter, js_name = interlinksProof)]
+    pub fn interlinks_proof(&self) -> BatchMerkleProof {
+        self.0.interlinks_proof.clone().into()
+    }
 
     /// Validates interlinks merkle root with compact merkle multiproof. See [`PoPowHeader::interlinks_proof`] for BatchMerkleProof access
     #[wasm_bindgen(js_name = checkInterlinksProof)]
@@ -99,8 +106,8 @@ impl PoPowHeader {
         self.0.header.height
     }
 
-    // /// Returns Block ID for Header
-    // pub fn id(&self) -> crate::block_header::BlockId {
-    //     self.0.header.id.clone().into()
-    // }
+    /// Returns Block ID for Header
+    pub fn id(&self) -> BlockId {
+        self.0.header.id.clone().to_string()
+    }
 }
