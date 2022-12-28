@@ -1,4 +1,5 @@
 use derive_more::{From, Into};
+use ergo_wasm_common::impl_json_methods;
 use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec, TryVecToJsArray};
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
@@ -112,16 +113,6 @@ impl BatchMerkleProof {
     pub fn valid(&self, expected_root: &[u8]) -> bool {
         self.0.valid(expected_root)
     }
-
-    /// Creates a new [`BatchMerkleProof`] from json representation
-    #[wasm_bindgen(js_name = fromJSON)]
-    pub fn from_json(json: JsValue) -> Result<BatchMerkleProof, serde_wasm_bindgen::Error> {
-        serde_wasm_bindgen::from_value(json)
-    }
-
-    /// Converts [`BatchMerkleProof`] to json representation
-    #[wasm_bindgen(js_name = toJSON)]
-    pub fn to_json(&self) -> Result<JsValue, serde_wasm_bindgen::Error> {
-        serde_wasm_bindgen::to_value(&self.0)
-    }
 }
+
+impl_json_methods!(BatchMerkleProof);
