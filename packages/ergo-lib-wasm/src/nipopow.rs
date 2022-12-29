@@ -1,11 +1,15 @@
 //! Bindings for NiPoPow
 
+use crate::prelude::*;
 use derive_more::{From, Into};
-use ergo_wasm_common::prelude::*;
+use js_sys::JsString;
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{prelude::*, JsCast};
 
-use crate::{blockchain::BlockId, merkle_tree::BatchMerkleProof};
+use crate::{
+    blockchain::{BlockHeader, JsBlockHeaderArray, JsBlockId},
+    merkle_tree::BatchMerkleProof,
+};
 
 /// A structure representing NiPoPow proof.
 #[wasm_bindgen]
@@ -44,10 +48,11 @@ pub struct NipopowVerifier(ergo_lib::ergo_nipopow::NipopowVerifier);
 impl NipopowVerifier {
     /// Create new instance
     #[wasm_bindgen(constructor)]
-    pub fn new(genesis_block_id: BlockId) -> Result<NipopowVerifier, JsValue> {
-        let block_id = ergo_lib::ergo_chain_types::Digest32::try_from(genesis_block_id)
-            .map(|d| ergo_lib::ergo_chain_types::BlockId(d))
-            .map_err_js_value()?;
+    pub fn new(genesis_block_id: &JsBlockId) -> Result<NipopowVerifier, JsValue> {
+        let block_id =
+            ergo_lib::ergo_chain_types::Digest32::try_from(genesis_block_id.as_string().unwrap())
+                .map(|d| ergo_lib::ergo_chain_types::BlockId(d))
+                .map_err_js_value()?;
 
         Ok(ergo_lib::ergo_nipopow::NipopowVerifier::new(block_id).into())
     }
@@ -58,10 +63,18 @@ impl NipopowVerifier {
         self.0.best_proof().map(NipopowProof)
     }
 
-    // /// Returns chain of `BlockHeader`s from the best proof.
-    // pub fn best_chain(&self) -> BlockHeaders {
-    //     BlockHeaders(self.0.best_chain().into_iter().map(|h| h.into()).collect())
-    // }
+    /// Returns chain of `BlockHeader`s from the best proof.
+    #[wasm_bindgen(getter, js_name = bestChain)]
+    pub fn best_chain(&self) -> Result<JsBlockHeaderArray, JsValue> {
+        let headers = self
+            .0
+            .best_chain()
+            .into_iter()
+            .map(BlockHeader::from)
+            .collect::<Vec<_>>();
+
+        headers.try_as_js_array()
+    }
 
     /// Process given proof
     pub fn process(&mut self, new_proof: NipopowProof) -> Result<(), JsValue> {
@@ -75,10 +88,11 @@ pub struct PoPowHeader(ergo_lib::ergo_nipopow::PoPowHeader);
 
 #[wasm_bindgen]
 impl PoPowHeader {
-    // /// Returns block header
-    // pub fn header(&self) -> BlockHeader {
-    //     self.0.header.clone().into()
-    // }
+    /// Returns the block header
+    #[wasm_bindgen(getter)]
+    pub fn header(&self) -> BlockHeader {
+        self.0.header.clone().into()
+    }
 
     /// Returns interlinks for PoPowHeader
     #[wasm_bindgen(getter)]
@@ -88,13 +102,14 @@ impl PoPowHeader {
             .map_err(Into::into)
     }
 
-    /// Returns interlinks proof [`crate::batchmerkleproof::BatchMerkleProof`]
+    /// Returns interlinks proof {@link BatchMerkleProof}
     #[wasm_bindgen(getter, js_name = interlinksProof)]
     pub fn interlinks_proof(&self) -> BatchMerkleProof {
         self.0.interlinks_proof.clone().into()
     }
 
-    /// Validates interlinks merkle root with compact merkle multiproof. See [`PoPowHeader::interlinks_proof`] for BatchMerkleProof access
+    /// Validates interlinks merkle root with compact merkle multiproof.
+    /// See {@link PoPowHeader.interlinksProof} for BatchMerkleProof access
     #[wasm_bindgen(js_name = checkInterlinksProof)]
     pub fn check_interlinks_proof(&self) -> bool {
         self.0.check_interlinks_proof()
@@ -107,7 +122,8 @@ impl PoPowHeader {
     }
 
     /// Returns Block ID for Header
-    pub fn id(&self) -> BlockId {
-        self.0.header.id.clone().to_string()
+    #[wasm_bindgen(getter)]
+    pub fn id(&self) -> JsBlockId {
+        JsString::from(self.0.header.id.clone().to_string()).unchecked_into()
     }
 }

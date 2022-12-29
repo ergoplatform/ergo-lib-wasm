@@ -1,8 +1,0 @@
-[package]
-name = "ergo-wasm-common"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-wasm-bindgen = "0.2.63"
-js-sys = "0.3.60"

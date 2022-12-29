@@ -1,6 +1,6 @@
+use crate::prelude::*;
 use derive_more::{From, Into};
-use ergo_wasm_common::impl_json_methods;
-use ergo_wasm_derive::{TryFromJsValue, TryJsArrayToVec, TryVecToJsArray};
+use ergo_wasm_derive::TryFromJsValue;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
@@ -28,15 +28,16 @@ impl From<ergo_lib::ergo_merkle_tree::NodeSide> for NodeSide {
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(typescript_type = "LevelNode[]")]
-    pub type LevelNodeArray;
+    pub type JsLevelNodeArray;
 }
 
 /// A level node in a merkle proof
-#[derive(TryFromJsValue, TryVecToJsArray, TryJsArrayToVec)]
-#[ergo(array_type = "LevelNodeArray")]
+#[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone, From, Into)]
 pub struct LevelNode(ergo_lib::ergo_merkle_tree::LevelNode);
+
+impl_try_js_array_to_vec!(JsLevelNodeArray to vec of LevelNode);
 
 #[wasm_bindgen]
 impl LevelNode {
@@ -78,9 +79,9 @@ impl MerkleProof {
     /// Additional nodes can be added with {@link MerkleProof.addNode}
     /// Each digest on the level must be exactly 32 bytes
     #[wasm_bindgen(constructor)]
-    pub fn new(leaf_data: &[u8], js_levels: &LevelNodeArray) -> Result<MerkleProof, JsValue> {
+    pub fn new(leaf_data: &[u8], js_levels: &JsLevelNodeArray) -> Result<MerkleProof, JsValue> {
         let levels = js_levels
-            .try_as_vec()?
+            .try_to_vec()?
             .into_iter()
             .map(ergo_lib::ergo_merkle_tree::LevelNode::from)
             .collect::<Vec<_>>();
