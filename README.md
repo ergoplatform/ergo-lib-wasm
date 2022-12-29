@@ -8,13 +8,15 @@ We are currently working on migrating from the bindings/packages located [here](
 
 ### ergo-lib-wasm
 
-This is the main wasm crate providing bindings to `sigma-rust` and is published to NPM under the [`@ergoplatform/ergo-lib-wasm`](TODO) package.
+This is the main wasm crate providing bindings to `sigma-rust` and is published to NPM under the [`@ergoplatform/ergo-lib-wasm`](https://www.npmjs.com/package/@ergoplatform/ergo-lib-wasm) package.
 
 The following functionality has been migrated:
 
 | Description | Migrated? |
 | --- |:---:|
 | Merkle tree functionality | ✅
+| NiPoPow | ✅
+| ErgoTree | WIP
 
 ### Internal Crates
 
@@ -22,5 +24,4 @@ This repository contains a few utility crates that are used throughout the repos
 
 | Crate | Description |
 | --- | --- |
-| [`ergo-wasm-common`](packages/ergo-wasm-common) | Utilities/traits/etc commonly used in bindings crates |
 | [`ergo-wasm-derive`](packages/ergo-wasm-derive) | Macros providing workarounds to [`wasm-bindgen`](https://github.com/rustwasm/wasm-bindgen) limitations. I.e working with arrays of WASM structs |

@@ -1,14 +1,14 @@
 //! Bindings for NiPoPow
 
-use crate::{blockchain::BlockId, prelude::*};
+use crate::{
+    blockchain::header::{BlockHeader, BlockId, JsBlockHeaderArray},
+    prelude::*,
+};
 use derive_more::{From, Into};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use crate::{
-    blockchain::{BlockHeader, JsBlockHeaderArray},
-    merkle_tree::BatchMerkleProof,
-};
+use crate::merkle_tree::BatchMerkleProof;
 
 /// A structure representing NiPoPow proof.
 #[wasm_bindgen]
