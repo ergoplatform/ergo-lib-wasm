@@ -1,4 +1,5 @@
 pub mod blockchain;
+pub mod ergo_tree;
 pub mod macros;
 pub mod merkle_tree;
 pub mod nipopow;
