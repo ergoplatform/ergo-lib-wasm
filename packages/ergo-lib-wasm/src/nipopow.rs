@@ -118,6 +118,6 @@ impl PoPowHeader {
     /// Returns Block ID for Header
     #[wasm_bindgen(getter)]
     pub fn id(&self) -> BlockId {
-        self.0.header.id.clone().into()
+        self.0.header.id.into()
     }
 }
