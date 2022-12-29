@@ -49,10 +49,12 @@ impl NipopowVerifier {
     /// Create new instance
     #[wasm_bindgen(constructor)]
     pub fn new(genesis_block_id: &JsBlockId) -> Result<NipopowVerifier, JsValue> {
-        let block_id =
-            ergo_lib::ergo_chain_types::Digest32::try_from(genesis_block_id.as_string().unwrap())
-                .map(|d| ergo_lib::ergo_chain_types::BlockId(d))
-                .map_err_js_value()?;
+        let block_str = genesis_block_id
+            .as_string()
+            .ok_or(JsValue::from_str("failed to convert JS string"))?;
+        let block_id = ergo_lib::ergo_chain_types::Digest32::try_from(block_str)
+            .map(ergo_lib::ergo_chain_types::BlockId)
+            .map_err_js_value()?;
 
         Ok(ergo_lib::ergo_nipopow::NipopowVerifier::new(block_id).into())
     }

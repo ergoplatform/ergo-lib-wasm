@@ -32,11 +32,13 @@ impl_try_vec_to_js_array!(vec of BlockHeader to JsBlockHeaderArray);
 #[wasm_bindgen]
 impl BlockHeader {
     /// Get Header's id
+    #[wasm_bindgen(getter)]
     pub fn id(&self) -> JsBlockId {
         JsString::from(self.0.id.to_string()).unchecked_into()
     }
 
     /// Get transactions root
+    #[wasm_bindgen(getter, js_name = txRoot)]
     pub fn transactions_root(&self) -> Vec<u8> {
         self.0.transaction_root.into()
     }
