@@ -17,7 +17,6 @@ getrandom = {version = "0.2.3", features = ["js"]}
 derive_more = "0.99.17"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.91"
-tsify = "0.4.3"
 ergo-wasm-derive = { path = "../ergo-wasm-derive" }
 
 [dev-dependencies]

@@ -1,22 +1,36 @@
-use crate::declarations::HexString;
 use crate::prelude::*;
 use derive_more::{From, Into};
 use ergo_lib::ergo_chain_types::Header;
 use ergo_wasm_derive::TryFromJsValue;
-use js_sys::JsString;
 use serde::{Deserialize, Serialize};
-use tsify::declare;
-use wasm_bindgen::{prelude::wasm_bindgen, JsCast};
+use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
-#[declare]
-#[allow(dead_code)]
-type BlockId = HexString;
+#[wasm_bindgen]
+#[derive(Debug, Clone, From, Into)]
+pub struct BlockId(pub(crate) ergo_lib::ergo_chain_types::BlockId);
+
+#[wasm_bindgen]
+impl BlockId {
+    #[wasm_bindgen(js_name = toHex)]
+    pub fn to_hex(&self) -> Result<String, JsValue> {
+        Ok(self.0.to_string())
+    }
+
+    #[wasm_bindgen(js_name = fromHex)]
+    pub fn from_hex(hex: &str) -> Result<BlockId, JsValue> {
+        ergo_lib::ergo_chain_types::Digest32::try_from(String::from(hex))
+            .map(|d| BlockId(ergo_lib::ergo_chain_types::BlockId(d)))
+            .map_err_js_value()
+    }
+
+    #[wasm_bindgen(js_name = isEqual)]
+    pub fn is_equal(&self, other: &BlockId) -> bool {
+        self.0 == other.0
+    }
+}
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(typescript_type = "BlockId")]
-    pub type JsBlockId;
-
     #[wasm_bindgen(typescript_type = "BlockHeader[]")]
     pub type JsBlockHeaderArray;
 }
@@ -33,8 +47,8 @@ impl_try_vec_to_js_array!(vec of BlockHeader to JsBlockHeaderArray);
 impl BlockHeader {
     /// Get Header's id
     #[wasm_bindgen(getter)]
-    pub fn id(&self) -> JsBlockId {
-        JsString::from(self.0.id.to_string()).unchecked_into()
+    pub fn id(&self) -> BlockId {
+        self.0.id.into()
     }
 
     /// Get transactions root

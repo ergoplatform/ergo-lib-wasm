@@ -69,8 +69,11 @@ impl LevelNode {
 }
 
 #[wasm_bindgen]
+#[derive(Serialize, Deserialize)]
 /// A MerkleProof type. Given leaf data and levels (bottom-upwards), the root hash can be computed and validated
 pub struct MerkleProof(pub(crate) ergo_lib::ergo_merkle_tree::MerkleProof);
+
+impl_json_methods!(MerkleProof);
 
 #[wasm_bindgen]
 impl MerkleProof {

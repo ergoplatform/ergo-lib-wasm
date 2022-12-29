@@ -1,13 +1,12 @@
 //! Bindings for NiPoPow
 
-use crate::prelude::*;
+use crate::{blockchain::BlockId, prelude::*};
 use derive_more::{From, Into};
-use js_sys::JsString;
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::prelude::*;
 
 use crate::{
-    blockchain::{BlockHeader, JsBlockHeaderArray, JsBlockId},
+    blockchain::{BlockHeader, JsBlockHeaderArray},
     merkle_tree::BatchMerkleProof,
 };
 
@@ -48,15 +47,8 @@ pub struct NipopowVerifier(ergo_lib::ergo_nipopow::NipopowVerifier);
 impl NipopowVerifier {
     /// Create new instance
     #[wasm_bindgen(constructor)]
-    pub fn new(genesis_block_id: &JsBlockId) -> Result<NipopowVerifier, JsValue> {
-        let block_str = genesis_block_id
-            .as_string()
-            .ok_or(JsValue::from_str("failed to convert JS string"))?;
-        let block_id = ergo_lib::ergo_chain_types::Digest32::try_from(block_str)
-            .map(ergo_lib::ergo_chain_types::BlockId)
-            .map_err_js_value()?;
-
-        Ok(ergo_lib::ergo_nipopow::NipopowVerifier::new(block_id).into())
+    pub fn new(genesis_block_id: &BlockId) -> Result<NipopowVerifier, JsValue> {
+        Ok(ergo_lib::ergo_nipopow::NipopowVerifier::new(genesis_block_id.clone().into()).into())
     }
 
     /// Return best proof
@@ -125,7 +117,7 @@ impl PoPowHeader {
 
     /// Returns Block ID for Header
     #[wasm_bindgen(getter)]
-    pub fn id(&self) -> JsBlockId {
-        JsString::from(self.0.header.id.clone().to_string()).unchecked_into()
+    pub fn id(&self) -> BlockId {
+        self.0.header.id.clone().into()
     }
 }
