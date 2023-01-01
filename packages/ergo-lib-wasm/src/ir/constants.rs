@@ -211,9 +211,7 @@ impl SColl {
 
 impl DynLiftIntoSType for SColl {
     fn dyn_stype(&self) -> SType {
-        let elem = self.elem_tpe();
-
-        SType::SColl(Box::new(elem))
+        SType::SColl(Box::new(self.elem_tpe()))
     }
 }
 
