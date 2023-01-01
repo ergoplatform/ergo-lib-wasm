@@ -1,0 +1,233 @@
+use crate::js::extract_classname;
+use crate::prelude::*;
+use ergo_lib::ergotree_ir::{
+    base16_str::Base16Str,
+    mir::{
+        constant::{Constant, Literal},
+        value::{CollKind, Value},
+    },
+    types::stype::SType,
+};
+use ergo_wasm_derive::TryFromJsValue;
+
+use js_sys::Array;
+use wasm_bindgen::prelude::*;
+
+/// Like `LiftIntoSType` this trait provides a method to get the `stype` from a type
+/// but is intended to be used at runtime.
+///
+/// Mostly for JS array values - there is no way to
+/// know at compile time what the `stype` of the array elements
+/// will be so we need to retrieve the type dynamically.
+trait DynLiftIntoSType {
+    fn dyn_stype(&self) -> SType;
+}
+
+#[wasm_bindgen]
+pub struct SConstant {
+    inner: Constant,
+    /// The `JsValue` used to create this `SConstant`.
+    ///
+    /// For example a class instance of `SByte` / `SColl` / etc.
+    /// Kept alive so we can retrieve the JS value used to
+    /// create this constant.
+    literal: JsValue,
+}
+
+#[wasm_bindgen]
+impl SConstant {
+    #[wasm_bindgen(js_name = toHex)]
+    pub fn to_hex(&self) -> Result<String, JsValue> {
+        self.inner.base16_str().map_err_js_value()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn literal(&self) -> JsValue {
+        self.literal.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn dbg(&self) -> String {
+        format!("{:?}", self.inner)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum SLiteral {
+    Boolean(SBoolean),
+    Byte(SByte),
+    Int(SInt),
+    Coll(SColl),
+}
+
+impl DynLiftIntoSType for SLiteral {
+    fn dyn_stype(&self) -> SType {
+        match self {
+            SLiteral::Boolean(_) => SType::SBoolean,
+            SLiteral::Byte(_) => SType::SByte,
+            SLiteral::Int(_) => SType::SInt,
+            SLiteral::Coll(v) => v.dyn_stype(),
+        }
+    }
+}
+
+impl TryFrom<JsValue> for SLiteral {
+    type Error = JsValue;
+
+    fn try_from(value: JsValue) -> Result<Self, Self::Error> {
+        let object_classname = extract_classname(&value)?;
+
+        match object_classname.as_str() {
+            "SBoolean" => Ok(SLiteral::Boolean(value.as_ref().try_into()?)),
+            "SByte" => Ok(SLiteral::Byte(value.as_ref().try_into()?)),
+            "SInt" => Ok(SLiteral::Int(value.as_ref().try_into()?)),
+            "SColl" => Ok(SLiteral::Coll(value.as_ref().try_into()?)),
+            _ => Err(format!("SValue: unknown class '{}'", object_classname).into()),
+        }
+    }
+}
+
+impl From<SLiteral> for Literal {
+    fn from(v: SLiteral) -> Self {
+        match v {
+            SLiteral::Boolean(v) => v.into(),
+            SLiteral::Byte(v) => v.into(),
+            SLiteral::Int(v) => v.into(),
+            SLiteral::Coll(v) => v.into(),
+        }
+    }
+}
+
+impl TryFrom<SLiteral> for Constant {
+    type Error = JsValue;
+
+    fn try_from(v: SLiteral) -> Result<Self, Self::Error> {
+        Value::from(Literal::from(v)).try_into().map_err_js_value()
+    }
+}
+
+macro_rules! impl_primitive_constant_literal {
+    ($l:ident, $ty:tt) => {
+        #[derive(TryFromJsValue)]
+        #[wasm_bindgen]
+        #[derive(Debug, Clone)]
+        pub struct $l($ty);
+
+        #[wasm_bindgen]
+        impl $l {
+            #[wasm_bindgen(constructor)]
+            pub fn new(value: $ty) -> Self {
+                Self(value)
+            }
+
+            #[wasm_bindgen(getter)]
+            pub fn value(&self) -> $ty {
+                self.0.clone()
+            }
+
+            #[wasm_bindgen(js_name = intoConstant)]
+            pub fn into_constant(self) -> SConstant {
+                SConstant {
+                    inner: self.0.into(),
+                    literal: self.into(),
+                }
+            }
+        }
+
+        impl From<$l> for Literal {
+            fn from(value: $l) -> Self {
+                value.0.into()
+            }
+        }
+    };
+}
+
+impl_primitive_constant_literal!(SBoolean, bool);
+impl_primitive_constant_literal!(SByte, i8);
+impl_primitive_constant_literal!(SShort, i16);
+impl_primitive_constant_literal!(SInt, i32);
+impl_primitive_constant_literal!(SLong, i64);
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SColl[]")]
+    pub type SLiteralArrayType;
+}
+
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SColl {
+    values: Vec<SLiteral>,
+    js_value: Array,
+}
+
+#[wasm_bindgen]
+impl SColl {
+    #[wasm_bindgen(constructor)]
+    pub fn new(js_coll: &SLiteralArrayType) -> Result<SColl, JsValue> {
+        // TODO: should we validate the js array input?
+        // I.e ensure the following:
+        //  - at least 1 element (?)
+        //  - ensure all elements of same type
+        let mut coll: Vec<SLiteral> = vec![];
+        let arr = Array::from(js_coll);
+
+        for js in arr.iter() {
+            coll.push(js.try_into()?)
+        }
+
+        Ok(SColl {
+            values: coll,
+            js_value: arr,
+        })
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> Result<SConstant, JsValue> {
+        let inner: Constant = Value::from(Literal::from(self.clone()))
+            .try_into()
+            .map_err_js_value()?;
+
+        Ok(SConstant {
+            inner,
+            literal: self.into(),
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> Array {
+        self.js_value.clone()
+    }
+}
+
+impl SColl {
+    fn elem_tpe(&self) -> SType {
+        // when creating a `SColl` we should check that it is valid
+        // in the constructor so `unwrap()` is safe here
+        self.values.get(0).unwrap().dyn_stype()
+    }
+}
+
+impl DynLiftIntoSType for SColl {
+    fn dyn_stype(&self) -> SType {
+        let elem = self.elem_tpe();
+
+        SType::SColl(Box::new(elem))
+    }
+}
+
+impl From<SColl> for Literal {
+    fn from(value: SColl) -> Self {
+        let items = value
+            .values
+            .iter()
+            .map(|v| v.clone().into())
+            .collect::<Vec<Literal>>();
+
+        Literal::Coll(CollKind::WrappedColl {
+            elem_tpe: value.elem_tpe(),
+            items,
+        })
+    }
+}
