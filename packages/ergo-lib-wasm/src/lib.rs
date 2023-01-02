@@ -1,3 +1,4 @@
+pub mod address;
 pub mod blockchain;
 pub mod ergo_tree;
 pub mod macros;
