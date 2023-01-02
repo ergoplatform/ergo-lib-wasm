@@ -16,6 +16,7 @@ The following functionality has been migrated:
 | --- |:---:|
 | Merkle tree functionality | ✅
 | NiPoPow | ✅
+| Addresses | ✅
 | ErgoTree | WIP
 
 ### Internal Crates
