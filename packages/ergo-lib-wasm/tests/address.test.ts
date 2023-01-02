@@ -27,7 +27,7 @@ describe("Address", () => {
     });
   });
   describe("addressType", () => {
-    each(
+    each([
       [
         "0008cd0327e65711a59378c59359c3e1d0f7abe906479eccb76094e50fe79d743ccc15e6",
         AddressTypePrefix.P2Pk,
@@ -35,8 +35,8 @@ describe("Address", () => {
       [
         "100204a00b08cd021dde34603426402615658f1d970cfa7c7bd92ac81a8b16eeebff264d59ce4604ea02d192a39a8cc7a70173007301",
         AddressTypePrefix.Pay2S,
-      ]
-    ).it(
+      ],
+    ]).it(
       "should return the expected address type prefix for the supplied ergo tree",
       (treeHex: string, addressType: AddressTypePrefix) => {
         const tree = ErgoTree.fromHex(treeHex);
