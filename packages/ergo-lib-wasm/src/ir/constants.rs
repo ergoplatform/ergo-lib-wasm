@@ -56,7 +56,9 @@ impl SConstant {
 pub enum SLiteral {
     Boolean(SBoolean),
     Byte(SByte),
+    Short(SShort),
     Int(SInt),
+    Long(SLong),
     Coll(SColl),
 }
 
@@ -65,7 +67,9 @@ impl DynLiftIntoSType for SLiteral {
         match self {
             SLiteral::Boolean(_) => SType::SBoolean,
             SLiteral::Byte(_) => SType::SByte,
+            SLiteral::Short(_) => SType::SShort,
             SLiteral::Int(_) => SType::SInt,
+            SLiteral::Long(_) => SType::SLong,
             SLiteral::Coll(v) => v.dyn_stype(),
         }
     }
@@ -77,12 +81,15 @@ impl TryFrom<JsValue> for SLiteral {
     fn try_from(value: JsValue) -> Result<Self, Self::Error> {
         let object_classname = extract_classname(&value)?;
 
+        let vref = value.as_ref();
         match object_classname.as_str() {
-            "SBoolean" => Ok(SLiteral::Boolean(value.as_ref().try_into()?)),
-            "SByte" => Ok(SLiteral::Byte(value.as_ref().try_into()?)),
-            "SInt" => Ok(SLiteral::Int(value.as_ref().try_into()?)),
-            "SColl" => Ok(SLiteral::Coll(value.as_ref().try_into()?)),
-            _ => Err(format!("SValue: unknown class '{}'", object_classname).into()),
+            "SBoolean" => Ok(SLiteral::Boolean(vref.try_into()?)),
+            "SByte" => Ok(SLiteral::Byte(vref.try_into()?)),
+            "SShort" => Ok(SLiteral::Short(vref.try_into()?)),
+            "SInt" => Ok(SLiteral::Int(vref.try_into()?)),
+            "SLong" => Ok(SLiteral::Long(vref.try_into()?)),
+            "SColl" => Ok(SLiteral::Coll(vref.try_into()?)),
+            _ => Err(format!("SLiteral: unknown class '{}'", object_classname).into()),
         }
     }
 }
@@ -92,7 +99,9 @@ impl From<SLiteral> for Literal {
         match v {
             SLiteral::Boolean(v) => v.into(),
             SLiteral::Byte(v) => v.into(),
+            SLiteral::Short(v) => v.into(),
             SLiteral::Int(v) => v.into(),
+            SLiteral::Long(v) => v.into(),
             SLiteral::Coll(v) => v.into(),
         }
     }
@@ -146,11 +155,44 @@ impl_primitive_constant_literal!(SBoolean, bool);
 impl_primitive_constant_literal!(SByte, i8);
 impl_primitive_constant_literal!(SShort, i16);
 impl_primitive_constant_literal!(SInt, i32);
-impl_primitive_constant_literal!(SLong, i64);
+
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SLong(i64);
+
+#[wasm_bindgen]
+impl SLong {
+    #[wasm_bindgen(constructor)]
+    pub fn new(value: js_sys::BigInt) -> Result<SLong, JsValue> {
+        Ok(Self(value.try_into().map_err_js_value()?))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> js_sys::BigInt {
+        js_sys::BigInt::from(self.0)
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> SConstant {
+        SConstant {
+            inner: self.0.into(),
+            literal: self.into(),
+        }
+    }
+}
+
+impl From<SLong> for Literal {
+    fn from(value: SLong) -> Self {
+        value.0.into()
+    }
+}
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SColl[]")]
+    #[wasm_bindgen(
+        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SColl[]"
+    )]
     pub type SLiteralArrayType;
 }
 

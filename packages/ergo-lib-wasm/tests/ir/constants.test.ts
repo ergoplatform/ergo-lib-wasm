@@ -1,4 +1,4 @@
-import { SColl, SByte, SInt } from "../../";
+import { SColl, SByte, SInt, SLong } from "../../";
 
 describe("Constants", () => {
   describe("Functional parity with library v0.x.x", () => {
@@ -47,6 +47,13 @@ describe("Constants", () => {
         ]).intoConstant();
 
         expect(constant.toHex()).toBe("10070802040a000410");
+      });
+    });
+    describe("i64 support", () => {
+      it("should handle the max value of i64", () => {
+        const constant = new SLong(BigInt("9223372036854775807")); // max i64 value
+
+        expect(constant.value).toBe(BigInt("9223372036854775807"));
       });
     });
   });
