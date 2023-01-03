@@ -1,6 +1,8 @@
 pub mod address;
 pub mod blockchain;
 pub mod ergo_tree;
+pub mod ir;
+pub mod js;
 pub mod macros;
 pub mod merkle_tree;
 pub mod nipopow;
