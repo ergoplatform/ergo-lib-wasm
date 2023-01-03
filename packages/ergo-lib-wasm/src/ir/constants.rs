@@ -54,6 +54,7 @@ impl SConstant {
 
 #[derive(Debug, Clone)]
 pub enum SLiteral {
+    Unit(SUnit),
     Boolean(SBoolean),
     Byte(SByte),
     Short(SShort),
@@ -65,6 +66,7 @@ pub enum SLiteral {
 impl DynLiftIntoSType for SLiteral {
     fn dyn_stype(&self) -> SType {
         match self {
+            SLiteral::Unit(_) => SType::SUnit,
             SLiteral::Boolean(_) => SType::SBoolean,
             SLiteral::Byte(_) => SType::SByte,
             SLiteral::Short(_) => SType::SShort,
@@ -83,6 +85,7 @@ impl TryFrom<JsValue> for SLiteral {
 
         let vref = value.as_ref();
         match object_classname.as_str() {
+            "SUnit" => Ok(SLiteral::Unit(vref.try_into()?)),
             "SBoolean" => Ok(SLiteral::Boolean(vref.try_into()?)),
             "SByte" => Ok(SLiteral::Byte(vref.try_into()?)),
             "SShort" => Ok(SLiteral::Short(vref.try_into()?)),
@@ -97,6 +100,7 @@ impl TryFrom<JsValue> for SLiteral {
 impl From<SLiteral> for Literal {
     fn from(v: SLiteral) -> Self {
         match v {
+            SLiteral::Unit(v) => v.into(),
             SLiteral::Boolean(v) => v.into(),
             SLiteral::Byte(v) => v.into(),
             SLiteral::Short(v) => v.into(),
@@ -155,6 +159,38 @@ impl_primitive_constant_literal!(SBoolean, bool);
 impl_primitive_constant_literal!(SByte, i8);
 impl_primitive_constant_literal!(SShort, i16);
 impl_primitive_constant_literal!(SInt, i32);
+
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SUnit(());
+
+#[wasm_bindgen]
+impl SUnit {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> SUnit {
+        Self(())
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> Result<SConstant, JsValue> {
+        Ok(SConstant {
+            inner: self.0.into(),
+            literal: self.into(),
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> JsValue {
+        JsValue::NULL
+    }
+}
+
+impl From<SUnit> for Literal {
+    fn from(_: SUnit) -> Self {
+        Literal::Unit
+    }
+}
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
