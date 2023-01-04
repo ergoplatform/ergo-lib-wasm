@@ -2,13 +2,16 @@ use crate::js::extract_classname;
 use crate::prelude::*;
 use ergo_lib::ergotree_ir::{
     base16_str::Base16Str,
+    bigint256::BigInt256,
     mir::{
         constant::{Constant, Literal},
         value::{CollKind, Value},
     },
+    sigma_protocol::sigma_boolean::{SigmaBoolean, SigmaProp},
     types::stype::SType,
 };
 use ergo_wasm_derive::TryFromJsValue;
+use num_traits::Num;
 
 use js_sys::Array;
 use wasm_bindgen::prelude::*;
@@ -54,22 +57,28 @@ impl SConstant {
 
 #[derive(Debug, Clone)]
 pub enum SLiteral {
+    Unit(SUnit),
     Boolean(SBoolean),
     Byte(SByte),
     Short(SShort),
     Int(SInt),
     Long(SLong),
+    BigInt(SBigInt),
+    SigmaProp(SSigmaProp),
     Coll(SColl),
 }
 
 impl DynLiftIntoSType for SLiteral {
     fn dyn_stype(&self) -> SType {
         match self {
+            SLiteral::Unit(_) => SType::SUnit,
             SLiteral::Boolean(_) => SType::SBoolean,
             SLiteral::Byte(_) => SType::SByte,
             SLiteral::Short(_) => SType::SShort,
             SLiteral::Int(_) => SType::SInt,
             SLiteral::Long(_) => SType::SLong,
+            SLiteral::BigInt(_) => SType::SBigInt,
+            SLiteral::SigmaProp(_) => SType::SSigmaProp,
             SLiteral::Coll(v) => v.dyn_stype(),
         }
     }
@@ -83,11 +92,14 @@ impl TryFrom<JsValue> for SLiteral {
 
         let vref = value.as_ref();
         match object_classname.as_str() {
+            "SUnit" => Ok(SLiteral::Unit(vref.try_into()?)),
             "SBoolean" => Ok(SLiteral::Boolean(vref.try_into()?)),
             "SByte" => Ok(SLiteral::Byte(vref.try_into()?)),
             "SShort" => Ok(SLiteral::Short(vref.try_into()?)),
             "SInt" => Ok(SLiteral::Int(vref.try_into()?)),
             "SLong" => Ok(SLiteral::Long(vref.try_into()?)),
+            "SBigInt" => Ok(SLiteral::BigInt(vref.try_into()?)),
+            "SSigmaProp" => Ok(SLiteral::SigmaProp(vref.try_into()?)),
             "SColl" => Ok(SLiteral::Coll(vref.try_into()?)),
             _ => Err(format!("SLiteral: unknown class '{}'", object_classname).into()),
         }
@@ -97,11 +109,14 @@ impl TryFrom<JsValue> for SLiteral {
 impl From<SLiteral> for Literal {
     fn from(v: SLiteral) -> Self {
         match v {
+            SLiteral::Unit(v) => v.into(),
             SLiteral::Boolean(v) => v.into(),
             SLiteral::Byte(v) => v.into(),
             SLiteral::Short(v) => v.into(),
             SLiteral::Int(v) => v.into(),
             SLiteral::Long(v) => v.into(),
+            SLiteral::BigInt(v) => v.into(),
+            SLiteral::SigmaProp(v) => v.into(),
             SLiteral::Coll(v) => v.into(),
         }
     }
@@ -158,6 +173,38 @@ impl_primitive_constant_literal!(SInt, i32);
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
+#[derive(Debug, Clone, Default)]
+pub struct SUnit;
+
+#[wasm_bindgen]
+impl SUnit {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> SUnit {
+        Self
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> Result<SConstant, JsValue> {
+        Ok(SConstant {
+            inner: ().into(),
+            literal: self.into(),
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> JsValue {
+        JsValue::NULL
+    }
+}
+
+impl From<SUnit> for Literal {
+    fn from(_: SUnit) -> Self {
+        Literal::Unit
+    }
+}
+
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
 #[derive(Debug, Clone)]
 pub struct SLong(i64);
 
@@ -188,10 +235,104 @@ impl From<SLong> for Literal {
     }
 }
 
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SBigInt {
+    value: BigInt256,
+    js_value: js_sys::BigInt,
+}
+
+#[wasm_bindgen]
+impl SBigInt {
+    #[wasm_bindgen(constructor)]
+    pub fn new(js_value: js_sys::BigInt) -> Result<SBigInt, JsValue> {
+        let radix = 10;
+        let s = js_value
+            .to_string(radix)
+            .map_err_js_value()?
+            .as_string()
+            .ok_or_else(|| JsValue::from_str("failed to convert JS string"))?;
+        let bi = BigInt256::from_str_radix(&s, radix as u32).map_err_js_value()?;
+
+        Ok(SBigInt {
+            value: bi,
+            js_value,
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> js_sys::BigInt {
+        self.js_value.clone()
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> SConstant {
+        SConstant {
+            inner: self.value.clone().into(),
+            literal: self.into(),
+        }
+    }
+}
+
+impl From<SBigInt> for Literal {
+    fn from(bigint: SBigInt) -> Self {
+        bigint.value.into()
+    }
+}
+
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SSigmaProp {
+    value: SigmaProp,
+    js_value: JsValue,
+}
+
+#[wasm_bindgen]
+impl SSigmaProp {
+    #[wasm_bindgen(js_name = fromJSON)]
+    pub fn from_json(json: &str) -> Result<SSigmaProp, JsValue> {
+        let value: SigmaBoolean = serde_json::from_str(json).map_err_js_value()?;
+
+        Ok(SSigmaProp {
+            value: value.into(),
+            js_value: json.into(),
+        })
+    }
+
+    #[wasm_bindgen(js_name = fromBool)]
+    pub fn from_bool(bool: bool) -> SSigmaProp {
+        SSigmaProp {
+            value: SigmaProp::new(bool.into()),
+            js_value: bool.into(),
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> JsValue {
+        self.js_value.clone()
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> SConstant {
+        SConstant {
+            inner: self.value.clone().into(),
+            literal: self.into(),
+        }
+    }
+}
+
+impl From<SSigmaProp> for Literal {
+    fn from(prop: SSigmaProp) -> Self {
+        prop.value.into()
+    }
+}
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(
-        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SColl[]"
+        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SColl[]"
     )]
     pub type SLiteralArrayType;
 }
