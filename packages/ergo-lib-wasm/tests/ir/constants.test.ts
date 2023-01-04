@@ -1,5 +1,15 @@
 import each from "jest-each";
-import { SColl, SByte, SInt, SLong, SBigInt, SSigmaProp } from "../../";
+import {
+  SColl,
+  SByte,
+  SInt,
+  SLong,
+  SBigInt,
+  SSigmaProp,
+  SGroupElement,
+  ErgoBox,
+  SErgoBox,
+} from "../../";
 
 describe("Constants", () => {
   describe("Functional parity with library v0.x.x", () => {
@@ -88,6 +98,47 @@ describe("Constants", () => {
         const constant = SSigmaProp.fromJSON(
           JSON.stringify(prop)
         ).intoConstant();
+
+        expect(constant).toBeDefined();
+      });
+    });
+    describe("GroupElement support", () => {
+      it("it should be creatable from hex string", () => {
+        const constant = SGroupElement.fromHex(
+          "02d6b2141c21e4f337e9b065a031a6269fb5a49253094fc6243d38662eb765db00"
+        ).intoConstant();
+
+        expect(constant).toBeDefined();
+      });
+      it("it should be creatable from byte array", () => {
+        const bytes = Uint8Array.from(
+          Buffer.from(
+            "02d6b2141c21e4f337e9b065a031a6269fb5a49253094fc6243d38662eb765db00",
+            "hex"
+          )
+        );
+        const constant = SGroupElement.fromBytes(bytes).intoConstant();
+
+        expect(constant).toBeDefined();
+      });
+    });
+    describe("ErgoBox support", () => {
+      it("should create constant from ErgoBox", () => {
+        const boxJson = {
+          boxId:
+            "e56847ed19b3dc6b72828fcfb992fdf7310828cf291221269b7ffc72fd66706e",
+          value: 67500000000,
+          ergoTree:
+            "100204a00b08cd021dde34603426402615658f1d970cfa7c7bd92ac81a8b16eeebff264d59ce4604ea02d192a39a8cc7a70173007301",
+          assets: [],
+          creationHeight: 284761,
+          additionalRegisters: {},
+          transactionId:
+            "9148408c04c2e38a6402a7950d6157730fa7d49e9ab3b9cadec481d7769918e9",
+          index: 1,
+        };
+        const box = ErgoBox.fromJSON(JSON.stringify(boxJson));
+        const constant = new SErgoBox(box).intoConstant();
 
         expect(constant).toBeDefined();
       });
