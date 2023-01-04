@@ -1,19 +1,23 @@
 use crate::js::extract_classname;
 use crate::prelude::*;
-use ergo_lib::ergotree_ir::{
-    base16_str::Base16Str,
-    bigint256::BigInt256,
-    mir::{
-        constant::{Constant, Literal},
-        value::{CollKind, Value},
+use ergo_lib::{
+    ergo_chain_types::EcPoint,
+    ergotree_ir::{
+        base16_str::Base16Str,
+        bigint256::BigInt256,
+        mir::{
+            constant::{Constant, Literal},
+            value::{CollKind, Value},
+        },
+        serialization::SigmaSerializable,
+        sigma_protocol::sigma_boolean::{SigmaBoolean, SigmaProp},
+        types::stype::SType,
     },
-    sigma_protocol::sigma_boolean::{SigmaBoolean, SigmaProp},
-    types::stype::SType,
 };
 use ergo_wasm_derive::TryFromJsValue;
 use num_traits::Num;
 
-use js_sys::Array;
+use js_sys::{Array, Uint8Array};
 use wasm_bindgen::prelude::*;
 
 /// Like `LiftIntoSType` this trait provides a method to get the `stype` from a type
@@ -65,6 +69,7 @@ pub enum SLiteral {
     Long(SLong),
     BigInt(SBigInt),
     SigmaProp(SSigmaProp),
+    GroupElement(SGroupElement),
     Coll(SColl),
 }
 
@@ -79,6 +84,7 @@ impl DynLiftIntoSType for SLiteral {
             SLiteral::Long(_) => SType::SLong,
             SLiteral::BigInt(_) => SType::SBigInt,
             SLiteral::SigmaProp(_) => SType::SSigmaProp,
+            SLiteral::GroupElement(_) => SType::SGroupElement,
             SLiteral::Coll(v) => v.dyn_stype(),
         }
     }
@@ -100,6 +106,7 @@ impl TryFrom<JsValue> for SLiteral {
             "SLong" => Ok(SLiteral::Long(vref.try_into()?)),
             "SBigInt" => Ok(SLiteral::BigInt(vref.try_into()?)),
             "SSigmaProp" => Ok(SLiteral::SigmaProp(vref.try_into()?)),
+            "SGroupElement" => Ok(SLiteral::GroupElement(vref.try_into()?)),
             "SColl" => Ok(SLiteral::Coll(vref.try_into()?)),
             _ => Err(format!("SLiteral: unknown class '{}'", object_classname).into()),
         }
@@ -117,6 +124,7 @@ impl From<SLiteral> for Literal {
             SLiteral::Long(v) => v.into(),
             SLiteral::BigInt(v) => v.into(),
             SLiteral::SigmaProp(v) => v.into(),
+            SLiteral::GroupElement(v) => v.into(),
             SLiteral::Coll(v) => v.into(),
         }
     }
@@ -329,10 +337,56 @@ impl From<SSigmaProp> for Literal {
     }
 }
 
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SGroupElement {
+    value: EcPoint,
+    js_value: JsValue,
+}
+
+#[wasm_bindgen]
+impl SGroupElement {
+    #[wasm_bindgen(js_name = fromHex)]
+    pub fn from_hex(hex: &str) -> Result<SGroupElement, JsValue> {
+        Ok(SGroupElement {
+            value: hex.to_string().try_into().map_err_js_value()?,
+            js_value: hex.into(),
+        })
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &Uint8Array) -> Result<SGroupElement, JsValue> {
+        Ok(SGroupElement {
+            value: EcPoint::sigma_parse_bytes(&bytes.to_vec()).map_err_js_value()?,
+            js_value: bytes.into(),
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> JsValue {
+        self.js_value.clone()
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> SConstant {
+        SConstant {
+            inner: self.value.clone().into(),
+            literal: self.into(),
+        }
+    }
+}
+
+impl From<SGroupElement> for Literal {
+    fn from(prop: SGroupElement) -> Self {
+        prop.value.into()
+    }
+}
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(
-        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SColl[]"
+        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] |SColl[]"
     )]
     pub type SLiteralArrayType;
 }

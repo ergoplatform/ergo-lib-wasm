@@ -1,5 +1,13 @@
 import each from "jest-each";
-import { SColl, SByte, SInt, SLong, SBigInt, SSigmaProp } from "../../";
+import {
+  SColl,
+  SByte,
+  SInt,
+  SLong,
+  SBigInt,
+  SSigmaProp,
+  SGroupElement,
+} from "../../";
 
 describe("Constants", () => {
   describe("Functional parity with library v0.x.x", () => {
@@ -88,6 +96,26 @@ describe("Constants", () => {
         const constant = SSigmaProp.fromJSON(
           JSON.stringify(prop)
         ).intoConstant();
+
+        expect(constant).toBeDefined();
+      });
+    });
+    describe("GroupElement support", () => {
+      it("it should be creatable from hex string", () => {
+        const constant = SGroupElement.fromHex(
+          "02d6b2141c21e4f337e9b065a031a6269fb5a49253094fc6243d38662eb765db00"
+        ).intoConstant();
+
+        expect(constant).toBeDefined();
+      });
+      it("it should be creatable from byte array", () => {
+        const bytes = Uint8Array.from(
+          Buffer.from(
+            "02d6b2141c21e4f337e9b065a031a6269fb5a49253094fc6243d38662eb765db00",
+            "hex"
+          )
+        );
+        const constant = SGroupElement.fromBytes(bytes).intoConstant();
 
         expect(constant).toBeDefined();
       });
