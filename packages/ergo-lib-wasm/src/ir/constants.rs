@@ -173,20 +173,20 @@ impl_primitive_constant_literal!(SInt, i32);
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SUnit(());
+#[derive(Debug, Clone, Default)]
+pub struct SUnit;
 
 #[wasm_bindgen]
 impl SUnit {
     #[wasm_bindgen(constructor)]
     pub fn new() -> SUnit {
-        Self(())
+        Self
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> Result<SConstant, JsValue> {
         Ok(SConstant {
-            inner: self.0.into(),
+            inner: ().into(),
             literal: self.into(),
         })
     }
