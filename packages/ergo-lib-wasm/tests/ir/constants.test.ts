@@ -1,4 +1,5 @@
-import { SColl, SByte, SInt, SLong, SBigInt } from "../../";
+import each from "jest-each";
+import { SColl, SByte, SInt, SLong, SBigInt, SSigmaProp } from "../../";
 
 describe("Constants", () => {
   describe("Functional parity with library v0.x.x", () => {
@@ -67,6 +68,28 @@ describe("Constants", () => {
           BigInt("92233720368547758071111111111111111111111111")
         );
         expect(() => constant.intoConstant()).not.toThrow();
+      });
+    });
+    describe("SigmaProp support", () => {
+      each([[true], [false]]).it(
+        "should handle trivial bool: %s",
+        (bool: boolean) => {
+          const constant = SSigmaProp.fromBool(bool);
+
+          expect(constant.value).toBe(bool);
+          expect(() => constant.intoConstant()).not.toThrow();
+        }
+      );
+      it("should handle complex propositions from JSON", () => {
+        const prop = {
+          op: "205", // OpCode::PROVE_DLOG
+          h: "02d6b2141c21e4f337e9b065a031a6269fb5a49253094fc6243d38662eb765db00", // random EC point
+        };
+        const constant = SSigmaProp.fromJSON(
+          JSON.stringify(prop)
+        ).intoConstant();
+
+        expect(constant).toBeDefined();
       });
     });
   });

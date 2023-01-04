@@ -7,6 +7,7 @@ use ergo_lib::ergotree_ir::{
         constant::{Constant, Literal},
         value::{CollKind, Value},
     },
+    sigma_protocol::sigma_boolean::{SigmaBoolean, SigmaProp},
     types::stype::SType,
 };
 use ergo_wasm_derive::TryFromJsValue;
@@ -63,6 +64,7 @@ pub enum SLiteral {
     Int(SInt),
     Long(SLong),
     BigInt(SBigInt),
+    SigmaProp(SSigmaProp),
     Coll(SColl),
 }
 
@@ -76,6 +78,7 @@ impl DynLiftIntoSType for SLiteral {
             SLiteral::Int(_) => SType::SInt,
             SLiteral::Long(_) => SType::SLong,
             SLiteral::BigInt(_) => SType::SBigInt,
+            SLiteral::SigmaProp(_) => SType::SSigmaProp,
             SLiteral::Coll(v) => v.dyn_stype(),
         }
     }
@@ -96,6 +99,7 @@ impl TryFrom<JsValue> for SLiteral {
             "SInt" => Ok(SLiteral::Int(vref.try_into()?)),
             "SLong" => Ok(SLiteral::Long(vref.try_into()?)),
             "SBigInt" => Ok(SLiteral::BigInt(vref.try_into()?)),
+            "SSigmaProp" => Ok(SLiteral::SigmaProp(vref.try_into()?)),
             "SColl" => Ok(SLiteral::Coll(vref.try_into()?)),
             _ => Err(format!("SLiteral: unknown class '{}'", object_classname).into()),
         }
@@ -112,6 +116,7 @@ impl From<SLiteral> for Literal {
             SLiteral::Int(v) => v.into(),
             SLiteral::Long(v) => v.into(),
             SLiteral::BigInt(v) => v.into(),
+            SLiteral::SigmaProp(v) => v.into(),
             SLiteral::Coll(v) => v.into(),
         }
     }
@@ -276,10 +281,58 @@ impl From<SBigInt> for Literal {
     }
 }
 
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SSigmaProp {
+    value: SigmaProp,
+    js_value: JsValue,
+}
+
+#[wasm_bindgen]
+impl SSigmaProp {
+    #[wasm_bindgen(js_name = fromJSON)]
+    pub fn from_json(json: &str) -> Result<SSigmaProp, JsValue> {
+        let value: SigmaBoolean = serde_json::from_str(json).map_err_js_value()?;
+
+        Ok(SSigmaProp {
+            value: value.into(),
+            js_value: json.into(),
+        })
+    }
+
+    #[wasm_bindgen(js_name = fromBool)]
+    pub fn from_bool(bool: bool) -> SSigmaProp {
+        SSigmaProp {
+            value: SigmaProp::new(bool.into()),
+            js_value: bool.into(),
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> JsValue {
+        self.js_value.clone()
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> SConstant {
+        SConstant {
+            inner: self.value.clone().into(),
+            literal: self.into(),
+        }
+    }
+}
+
+impl From<SSigmaProp> for Literal {
+    fn from(prop: SSigmaProp) -> Self {
+        prop.value.into()
+    }
+}
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(
-        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SColl[]"
+        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SColl[]"
     )]
     pub type SLiteralArrayType;
 }
