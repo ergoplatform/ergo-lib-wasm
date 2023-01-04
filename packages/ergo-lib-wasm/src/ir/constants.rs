@@ -1,10 +1,11 @@
-use crate::js::extract_classname;
 use crate::prelude::*;
+use crate::{blockchain::ergo_box::ErgoBox, js::extract_classname};
 use ergo_lib::{
     ergo_chain_types::EcPoint,
     ergotree_ir::{
         base16_str::Base16Str,
         bigint256::BigInt256,
+        chain::ergo_box::ErgoBox as NativeErgoBox,
         mir::{
             constant::{Constant, Literal},
             value::{CollKind, Value},
@@ -70,6 +71,7 @@ pub enum SLiteral {
     BigInt(SBigInt),
     SigmaProp(SSigmaProp),
     GroupElement(SGroupElement),
+    ErgoBox(SErgoBox),
     Coll(SColl),
 }
 
@@ -85,6 +87,7 @@ impl DynLiftIntoSType for SLiteral {
             SLiteral::BigInt(_) => SType::SBigInt,
             SLiteral::SigmaProp(_) => SType::SSigmaProp,
             SLiteral::GroupElement(_) => SType::SGroupElement,
+            SLiteral::ErgoBox(_) => SType::SBox,
             SLiteral::Coll(v) => v.dyn_stype(),
         }
     }
@@ -107,6 +110,7 @@ impl TryFrom<JsValue> for SLiteral {
             "SBigInt" => Ok(SLiteral::BigInt(vref.try_into()?)),
             "SSigmaProp" => Ok(SLiteral::SigmaProp(vref.try_into()?)),
             "SGroupElement" => Ok(SLiteral::GroupElement(vref.try_into()?)),
+            "SErgoBox" => Ok(SLiteral::ErgoBox(vref.try_into()?)),
             "SColl" => Ok(SLiteral::Coll(vref.try_into()?)),
             _ => Err(format!("SLiteral: unknown class '{}'", object_classname).into()),
         }
@@ -125,6 +129,7 @@ impl From<SLiteral> for Literal {
             SLiteral::BigInt(v) => v.into(),
             SLiteral::SigmaProp(v) => v.into(),
             SLiteral::GroupElement(v) => v.into(),
+            SLiteral::ErgoBox(v) => v.into(),
             SLiteral::Coll(v) => v.into(),
         }
     }
@@ -383,10 +388,48 @@ impl From<SGroupElement> for Literal {
     }
 }
 
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SErgoBox {
+    value: NativeErgoBox,
+    js_value: ErgoBox,
+}
+
+#[wasm_bindgen]
+impl SErgoBox {
+    #[wasm_bindgen(constructor)]
+    pub fn new(ergo_box: &ErgoBox) -> SErgoBox {
+        SErgoBox {
+            value: ergo_box.clone().into(),
+            js_value: ergo_box.clone(),
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> ErgoBox {
+        self.js_value.clone()
+    }
+
+    #[wasm_bindgen(js_name = intoConstant)]
+    pub fn into_constant(self) -> SConstant {
+        SConstant {
+            inner: self.value.clone().into(),
+            literal: self.into(),
+        }
+    }
+}
+
+impl From<SErgoBox> for Literal {
+    fn from(prop: SErgoBox) -> Self {
+        prop.value.into()
+    }
+}
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(
-        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] |SColl[]"
+        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] | SErgoBox | SColl[]"
     )]
     pub type SLiteralArrayType;
 }
