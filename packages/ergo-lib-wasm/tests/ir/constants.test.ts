@@ -9,6 +9,7 @@ import {
   SGroupElement,
   ErgoBox,
   SErgoBox,
+  SConstant,
 } from "../../";
 
 describe("Constants", () => {
@@ -141,6 +142,18 @@ describe("Constants", () => {
         const constant = new SErgoBox(box).intoConstant();
 
         expect(constant).toBeDefined();
+      });
+    });
+    // https://github.com/ergoplatform/sigma-rust/blob/166a14ae098ef605ceefccdef53a9a357c088f20/bindings/ergo-lib-wasm/tests/test_constant.js#L146
+    describe("EIP-24 R7 monster type", () => {
+      it("should produce the same type", () => {
+        const constant = SConstant.fromHex(
+          "3c0c3c0e0e3c0c3c0e580c3c0e58010301020303040506010301020314160103040506181a"
+        );
+
+        expect(constant.typeStr).toBe(
+          "STuple([SColl(STuple([SColl(SByte), SColl(SByte)])), STuple([SColl(STuple([SColl(SByte), STuple([SInt, SInt])])), SColl(STuple([SColl(SByte), STuple([SInt, SInt])]))])])"
+        );
       });
     });
   });

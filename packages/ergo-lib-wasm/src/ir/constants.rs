@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::{blockchain::ergo_box::ErgoBox, js::extract_classname};
+use ergo_lib::ergo_chain_types::Base16DecodedBytes;
 use ergo_lib::{
     ergo_chain_types::EcPoint,
     ergotree_ir::{
@@ -32,6 +33,19 @@ trait DynLiftIntoSType {
 }
 
 #[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(
+        typescript_type = "SBoolean | SByte | SShort | SInt | SLong | SBigInt | SSigmaProp | SGroupElement | SErgoBox | SColl"
+    )]
+    pub type TsSLiteralType;
+
+    #[wasm_bindgen(
+        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] | SErgoBox[] | SColl[]"
+    )]
+    pub type TsSLiteralArrayType;
+}
+
+#[wasm_bindgen]
 pub struct SConstant {
     inner: Constant,
     /// The `JsValue` used to create this `SConstant`.
@@ -39,7 +53,7 @@ pub struct SConstant {
     /// For example a class instance of `SByte` / `SColl` / etc.
     /// Kept alive so we can retrieve the JS value used to
     /// create this constant.
-    literal: JsValue,
+    created_from: JsValue,
 }
 
 #[wasm_bindgen]
@@ -49,9 +63,40 @@ impl SConstant {
         self.inner.base16_str().map_err_js_value()
     }
 
-    #[wasm_bindgen(getter)]
-    pub fn literal(&self) -> JsValue {
-        self.literal.clone()
+    #[wasm_bindgen(js_name = fromHex)]
+    pub fn from_hex(hex: &str) -> Result<SConstant, JsValue> {
+        let bytes = Base16DecodedBytes::try_from(hex).map_err_js_value()?;
+        let inner = Constant::try_from(bytes).map_err_js_value()?;
+
+        Ok(SConstant {
+            inner,
+            created_from: hex.into(),
+        })
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &Uint8Array) -> Result<SConstant, JsValue> {
+        let inner = Constant::try_from(bytes.to_vec()).map_err_js_value()?;
+
+        Ok(SConstant {
+            inner,
+            created_from: bytes.into(),
+        })
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
+        self.inner.sigma_serialize_bytes().map_err_js_value()
+    }
+
+    #[wasm_bindgen(getter, js_name = createdFrom)]
+    pub fn created_from(&self) -> JsValue {
+        self.created_from.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = typeStr)]
+    pub fn tpe(&self) -> String {
+        format!("{:?}", self.inner.tpe)
     }
 
     #[wasm_bindgen]
@@ -166,7 +211,7 @@ macro_rules! impl_primitive_constant_literal {
             pub fn into_constant(self) -> SConstant {
                 SConstant {
                     inner: self.0.into(),
-                    literal: self.into(),
+                    created_from: self.into(),
                 }
             }
         }
@@ -200,7 +245,7 @@ impl SUnit {
     pub fn into_constant(self) -> Result<SConstant, JsValue> {
         Ok(SConstant {
             inner: ().into(),
-            literal: self.into(),
+            created_from: self.into(),
         })
     }
 
@@ -237,7 +282,7 @@ impl SLong {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.0.into(),
-            literal: self.into(),
+            created_from: self.into(),
         }
     }
 }
@@ -283,7 +328,7 @@ impl SBigInt {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            literal: self.into(),
+            created_from: self.into(),
         }
     }
 }
@@ -331,7 +376,7 @@ impl SSigmaProp {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            literal: self.into(),
+            created_from: self.into(),
         }
     }
 }
@@ -377,7 +422,7 @@ impl SGroupElement {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            literal: self.into(),
+            created_from: self.into(),
         }
     }
 }
@@ -415,7 +460,7 @@ impl SErgoBox {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            literal: self.into(),
+            created_from: self.into(),
         }
     }
 }
@@ -424,14 +469,6 @@ impl From<SErgoBox> for Literal {
     fn from(prop: SErgoBox) -> Self {
         prop.value.into()
     }
-}
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(
-        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] | SErgoBox | SColl[]"
-    )]
-    pub type SLiteralArrayType;
 }
 
 #[derive(TryFromJsValue)]
@@ -445,7 +482,7 @@ pub struct SColl {
 #[wasm_bindgen]
 impl SColl {
     #[wasm_bindgen(constructor)]
-    pub fn new(js_coll: &SLiteralArrayType) -> Result<SColl, JsValue> {
+    pub fn new(js_coll: &TsSLiteralArrayType) -> Result<SColl, JsValue> {
         // TODO: should we validate the js array input?
         // I.e ensure the following:
         //  - at least 1 element (?)
@@ -471,7 +508,7 @@ impl SColl {
 
         Ok(SConstant {
             inner,
-            literal: self.into(),
+            created_from: self.into(),
         })
     }
 
