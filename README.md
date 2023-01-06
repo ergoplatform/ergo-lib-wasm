@@ -14,10 +14,10 @@ The following functionality has been migrated:
 
 | Description | Migrated? |
 | --- |:---:|
-| Merkle tree functionality | ✅
+| Merkle tree | ✅
 | NiPoPow | ✅
 | Addresses | ✅
-| ErgoTree | WIP
+| ErgoTree | ✅
 
 ### Internal Crates
 
