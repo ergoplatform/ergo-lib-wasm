@@ -46,14 +46,32 @@ extern "C" {
 }
 
 #[wasm_bindgen]
+#[derive(Debug, Clone)]
 pub struct SConstant {
     inner: Constant,
     /// The `JsValue` used to create this `SConstant`.
     ///
     /// For example a class instance of `SByte` / `SColl` / etc.
     /// Kept alive so we can retrieve the JS value used to
-    /// create this constant.
-    created_from: JsValue,
+    /// create this constant. Will be `None` if the constant
+    /// wasn't created in JS, i.e it was retrieved from a box register
+    /// or some other external data source.
+    created_from: Option<JsValue>,
+}
+
+impl From<Constant> for SConstant {
+    fn from(v: Constant) -> Self {
+        Self {
+            inner: v,
+            created_from: None,
+        }
+    }
+}
+
+impl From<SConstant> for Constant {
+    fn from(v: SConstant) -> Self {
+        v.inner
+    }
 }
 
 #[wasm_bindgen]
@@ -70,7 +88,7 @@ impl SConstant {
 
         Ok(SConstant {
             inner,
-            created_from: hex.into(),
+            created_from: Some(hex.into()),
         })
     }
 
@@ -80,7 +98,7 @@ impl SConstant {
 
         Ok(SConstant {
             inner,
-            created_from: bytes.into(),
+            created_from: Some(bytes.into()),
         })
     }
 
@@ -89,9 +107,17 @@ impl SConstant {
         self.inner.sigma_serialize_bytes().map_err_js_value()
     }
 
+    /// The JS value that was used to create this constant.
+    /// Will be `undefined` if the constant wasn't created via JS,
+    /// i.e it was retrieved from an ergo box register or some other
+    /// external source.
     #[wasm_bindgen(getter, js_name = createdFrom)]
     pub fn created_from(&self) -> JsValue {
-        self.created_from.clone()
+        if let Some(v) = &self.created_from {
+            v.clone()
+        } else {
+            JsValue::UNDEFINED
+        }
     }
 
     #[wasm_bindgen(getter, js_name = typeStr)]
@@ -211,7 +237,7 @@ macro_rules! impl_primitive_constant_literal {
             pub fn into_constant(self) -> SConstant {
                 SConstant {
                     inner: self.0.into(),
-                    created_from: self.into(),
+                    created_from: Some(self.into()),
                 }
             }
         }
@@ -245,7 +271,7 @@ impl SUnit {
     pub fn into_constant(self) -> Result<SConstant, JsValue> {
         Ok(SConstant {
             inner: ().into(),
-            created_from: self.into(),
+            created_from: Some(self.into()),
         })
     }
 
@@ -282,7 +308,7 @@ impl SLong {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.0.into(),
-            created_from: self.into(),
+            created_from: Some(self.into()),
         }
     }
 }
@@ -328,7 +354,7 @@ impl SBigInt {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            created_from: self.into(),
+            created_from: Some(self.into()),
         }
     }
 }
@@ -376,7 +402,7 @@ impl SSigmaProp {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            created_from: self.into(),
+            created_from: Some(self.into()),
         }
     }
 }
@@ -422,7 +448,7 @@ impl SGroupElement {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            created_from: self.into(),
+            created_from: Some(self.into()),
         }
     }
 }
@@ -460,7 +486,7 @@ impl SErgoBox {
     pub fn into_constant(self) -> SConstant {
         SConstant {
             inner: self.value.clone().into(),
-            created_from: self.into(),
+            created_from: Some(self.into()),
         }
     }
 }
@@ -508,7 +534,7 @@ impl SColl {
 
         Ok(SConstant {
             inner,
-            created_from: self.into(),
+            created_from: Some(self.into()),
         })
     }
 

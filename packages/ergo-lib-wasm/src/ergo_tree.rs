@@ -1,5 +1,6 @@
 //! ErgoTree
 
+use crate::ir::constants::SConstant;
 use crate::prelude::*;
 use derive_more::{From, Into};
 use ergo_lib::ergo_chain_types::Base16DecodedBytes;
@@ -42,30 +43,32 @@ impl ErgoTree {
     }
 
     /// Returns number of constants stored in the Ergo Tree
-    #[wasm_bindgen(getter, js_name = constLength)]
+    #[wasm_bindgen(getter, js_name = constantsLength)]
     pub fn constants_len(&self) -> Result<usize, JsValue> {
         self.0.constants_len().map_err_js_value()
     }
 
-    // /// Returns constant with given index (as stored in serialized ErgoTree)
-    // /// or None if index is out of bounds
-    // /// or error if constants parsing were failed
-    // pub fn get_constant(&self, index: usize) -> Result<Option<Constant>, JsValue> {
-    //     self.0
-    //         .get_constant(index)
-    //         .map(|opt| opt.map(|c| c.into()))
-    //         .map_err_js_value()
-    // }
+    /// Returns constant with given index (as stored in serialized ErgoTree)
+    /// or None if index is out of bounds
+    /// or error if constants parsing were failed
+    #[wasm_bindgen(js_name = getConstant)]
+    pub fn get_constant(&self, index: usize) -> Result<Option<SConstant>, JsValue> {
+        self.0
+            .get_constant(index)
+            .map(|opt| opt.map(SConstant::from))
+            .map_err_js_value()
+    }
 
-    // /// Consumes the calling ErgoTree and returns new ErgoTree with a new constant value
-    // /// for a given index in constants list (as stored in serialized ErgoTree), or an error.
-    // /// After the call the calling ErgoTree will be null.
-    // pub fn with_constant(self, index: usize, constant: &Constant) -> Result<ErgoTree, JsValue> {
-    //     self.0
-    //         .with_constant(index, constant.clone().into())
-    //         .map(ErgoTree)
-    //         .map_err_js_value()
-    // }
+    /// Consumes the calling ErgoTree and returns new ErgoTree with a new constant value
+    /// for a given index in constants list (as stored in serialized ErgoTree), or an error.
+    /// After the call the calling ErgoTree will be null.
+    #[wasm_bindgen(js_name = withConstant)]
+    pub fn with_constant(self, index: usize, constant: &SConstant) -> Result<ErgoTree, JsValue> {
+        self.0
+            .with_constant(index, constant.clone().into())
+            .map(ErgoTree)
+            .map_err_js_value()
+    }
 
     /// Serialized proposition expression of SigmaProp type with
     /// ConstantPlaceholder nodes instead of Constant nodes
