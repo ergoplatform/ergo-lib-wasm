@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use crate::prelude::*;
 use crate::{blockchain::ergo_box::ErgoBox, js::extract_classname};
+use derive_more::{From, Into};
 use ergo_lib::ergo_chain_types::Base16DecodedBytes;
 use ergo_lib::{
     ergo_chain_types::EcPoint,
@@ -118,6 +121,30 @@ impl SConstant {
         } else {
             JsValue::UNDEFINED
         }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn literal(&self) -> Result<TsSLiteralType, JsValue> {
+        let v: JsValue = match self.inner.v.clone() {
+            Literal::Unit => SUnit::new().into(),
+            Literal::Boolean(v) => SBoolean::new(v).into(),
+            Literal::Byte(v) => SByte::new(v).into(),
+            Literal::Short(v) => SShort::new(v).into(),
+            Literal::Int(v) => SInt::new(v).into(),
+            Literal::Long(v) => SLong::new(js_sys::BigInt::from(v))?.into(),
+            Literal::BigInt(v) => {
+                SBigInt::new(js_sys::BigInt::from_str(v.to_string().as_str())?)?.into()
+            }
+            Literal::SigmaProp(v) => SSigmaProp::from(*v).into(),
+            Literal::GroupElement(_) => todo!(),
+            Literal::AvlTree(_) => todo!(),
+            Literal::CBox(_) => todo!(),
+            Literal::Coll(_) => todo!(),
+            Literal::Opt(_) => todo!(),
+            Literal::Tup(_) => todo!(),
+        };
+
+        Ok(v.into())
     }
 
     #[wasm_bindgen(getter, js_name = typeStr)]
@@ -322,10 +349,7 @@ impl From<SLong> for Literal {
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
-pub struct SBigInt {
-    value: BigInt256,
-    js_value: js_sys::BigInt,
-}
+pub struct SBigInt(BigInt256);
 
 #[wasm_bindgen]
 impl SBigInt {
@@ -339,21 +363,20 @@ impl SBigInt {
             .ok_or_else(|| JsValue::from_str("failed to convert JS string"))?;
         let bi = BigInt256::from_str_radix(&s, radix as u32).map_err_js_value()?;
 
-        Ok(SBigInt {
-            value: bi,
-            js_value,
-        })
+        Ok(SBigInt(bi))
     }
 
     #[wasm_bindgen(getter)]
-    pub fn value(&self) -> js_sys::BigInt {
-        self.js_value.clone()
+    pub fn value(&self) -> Result<js_sys::BigInt, JsValue> {
+        let s = self.0.to_string();
+
+        js_sys::BigInt::from_str(s.as_str()).map_err_js_value()
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
         SConstant {
-            inner: self.value.clone().into(),
+            inner: self.0.clone().into(),
             created_from: Some(self.into()),
         }
     }
@@ -361,93 +384,86 @@ impl SBigInt {
 
 impl From<SBigInt> for Literal {
     fn from(bigint: SBigInt) -> Self {
-        bigint.value.into()
+        bigint.0.into()
     }
 }
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SSigmaProp {
-    value: SigmaProp,
-    js_value: JsValue,
-}
+#[derive(Debug, Clone, From, Into)]
+pub struct SSigmaProp(SigmaProp);
 
 #[wasm_bindgen]
 impl SSigmaProp {
     #[wasm_bindgen(js_name = fromJSON)]
     pub fn from_json(json: &str) -> Result<SSigmaProp, JsValue> {
         let value: SigmaBoolean = serde_json::from_str(json).map_err_js_value()?;
+        let prop: SigmaProp = value.into();
 
-        Ok(SSigmaProp {
-            value: value.into(),
-            js_value: json.into(),
-        })
+        Ok(prop.into())
     }
 
     #[wasm_bindgen(js_name = fromBool)]
     pub fn from_bool(bool: bool) -> SSigmaProp {
-        SSigmaProp {
-            value: SigmaProp::new(bool.into()),
-            js_value: bool.into(),
-        }
+        SigmaProp::new(bool.into()).into()
     }
 
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> JsValue {
-        self.js_value.clone()
+        match self.0.value() {
+            SigmaBoolean::TrivialProp(bool) => bool.clone().into(),
+            SigmaBoolean::ProofOfKnowledge(_) => todo!(),
+            SigmaBoolean::SigmaConjecture(_) => todo!(),
+        }
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
         SConstant {
-            inner: self.value.clone().into(),
-            created_from: Some(self.into()),
+            inner: self.0.clone().into(),
+            created_from: None,
         }
     }
 }
 
 impl From<SSigmaProp> for Literal {
     fn from(prop: SSigmaProp) -> Self {
-        prop.value.into()
+        prop.0.into()
     }
 }
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SGroupElement {
-    value: EcPoint,
-    js_value: JsValue,
-}
+#[derive(Debug, Clone, From, Into)]
+pub struct SGroupElement(EcPoint);
 
 #[wasm_bindgen]
 impl SGroupElement {
     #[wasm_bindgen(js_name = fromHex)]
     pub fn from_hex(hex: &str) -> Result<SGroupElement, JsValue> {
-        Ok(SGroupElement {
-            value: hex.to_string().try_into().map_err_js_value()?,
-            js_value: hex.into(),
-        })
+        let ec: EcPoint = hex.to_string().try_into().map_err_js_value()?;
+
+        Ok(ec.into())
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &Uint8Array) -> Result<SGroupElement, JsValue> {
-        Ok(SGroupElement {
-            value: EcPoint::sigma_parse_bytes(&bytes.to_vec()).map_err_js_value()?,
-            js_value: bytes.into(),
-        })
+        Ok(EcPoint::sigma_parse_bytes(&bytes.to_vec())
+            .map_err_js_value()?
+            .into())
     }
 
     #[wasm_bindgen(getter)]
-    pub fn value(&self) -> JsValue {
-        self.js_value.clone()
+    pub fn value(&self) -> Result<Uint8Array, JsValue> {
+        let bytes = self.0.sigma_serialize_bytes().map_err_js_value()?;
+
+        Ok(Uint8Array::from(bytes.as_slice()))
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
         SConstant {
-            inner: self.value.clone().into(),
+            inner: self.0.clone().into(),
             created_from: Some(self.into()),
         }
     }
@@ -455,37 +471,31 @@ impl SGroupElement {
 
 impl From<SGroupElement> for Literal {
     fn from(prop: SGroupElement) -> Self {
-        prop.value.into()
+        prop.0.into()
     }
 }
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
-pub struct SErgoBox {
-    value: NativeErgoBox,
-    js_value: ErgoBox,
-}
+pub struct SErgoBox(NativeErgoBox);
 
 #[wasm_bindgen]
 impl SErgoBox {
     #[wasm_bindgen(constructor)]
     pub fn new(ergo_box: &ErgoBox) -> SErgoBox {
-        SErgoBox {
-            value: ergo_box.clone().into(),
-            js_value: ergo_box.clone(),
-        }
+        SErgoBox(ergo_box.clone().into())
     }
 
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> ErgoBox {
-        self.js_value.clone()
+        self.0.clone().into()
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
         SConstant {
-            inner: self.value.clone().into(),
+            inner: self.0.clone().into(),
             created_from: Some(self.into()),
         }
     }
@@ -493,7 +503,7 @@ impl SErgoBox {
 
 impl From<SErgoBox> for Literal {
     fn from(prop: SErgoBox) -> Self {
-        prop.value.into()
+        prop.0.into()
     }
 }
 
