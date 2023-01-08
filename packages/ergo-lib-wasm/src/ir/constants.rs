@@ -136,9 +136,16 @@ impl SConstant {
                 SBigInt::new(js_sys::BigInt::from_str(v.to_string().as_str())?)?.into()
             }
             Literal::SigmaProp(v) => SSigmaProp::from(*v).into(),
-            Literal::GroupElement(_) => todo!(),
+            Literal::GroupElement(v) => {
+                SGroupElement::try_from((*v).sigma_serialize_bytes().map_err_js_value()?)?.into()
+            }
             Literal::AvlTree(_) => todo!(),
-            Literal::CBox(_) => todo!(),
+            Literal::CBox(v) => {
+                let native_box = &*v;
+                let ergo_box = ErgoBox::from(native_box.clone());
+
+                SErgoBox::new(&ergo_box).into()
+            }
             Literal::Coll(_) => todo!(),
             Literal::Opt(_) => todo!(),
             Literal::Tup(_) => todo!(),
@@ -472,6 +479,16 @@ impl SGroupElement {
 impl From<SGroupElement> for Literal {
     fn from(prop: SGroupElement) -> Self {
         prop.0.into()
+    }
+}
+
+impl TryFrom<Vec<u8>> for SGroupElement {
+    type Error = JsValue;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        let arr = Uint8Array::from(value.as_slice());
+
+        Self::from_bytes(&arr)
     }
 }
 
