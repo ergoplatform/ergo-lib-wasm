@@ -157,4 +157,20 @@ describe("Constants", () => {
       });
     });
   });
+  describe("Conversion to JS value", () => {
+    it("should convert collection of SInt to array of int", () => {
+      const { value } = new SColl([
+        new SInt(4),
+        new SInt(1),
+        new SInt(2),
+        new SInt(5),
+        new SInt(0),
+        new SInt(2),
+        new SInt(8),
+      ]);
+      const expected = [4, 1, 2, 5, 0, 2, 8];
+
+      expect(value).toEqual(expected);
+    });
+  });
 });
