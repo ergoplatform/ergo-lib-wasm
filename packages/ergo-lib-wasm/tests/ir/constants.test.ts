@@ -10,6 +10,7 @@ import {
   ErgoBox,
   SErgoBox,
   SConstant,
+  SBoolean,
 } from "../../";
 
 describe("Constants", () => {
@@ -169,6 +170,18 @@ describe("Constants", () => {
         new SInt(8),
       ]);
       const expected = [4, 1, 2, 5, 0, 2, 8];
+
+      expect(value).toEqual(expected);
+    });
+    it("should handle nested collections", () => {
+      const { value } = new SColl([
+        new SColl([new SBoolean(true), new SBoolean(true)]),
+        new SColl([new SBoolean(false), new SBoolean(true)]),
+      ]);
+      const expected = [
+        [true, true],
+        [false, true],
+      ];
 
       expect(value).toEqual(expected);
     });
