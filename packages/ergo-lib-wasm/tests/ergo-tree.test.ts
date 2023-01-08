@@ -35,7 +35,7 @@ describe("ErgoTree", () => {
       const treeConstant = updatedTree.getConstant(0)!;
 
       // TODO: need to be able to convert treeConstant to JS value
-      expect(true).toBe(true);
+      expect(treeConstant.literal.value).toBe(1337);
     });
     it("should throw when inserting constant at an out-of-bounds index", () => {
       const constant = new SInt(1337).intoConstant();

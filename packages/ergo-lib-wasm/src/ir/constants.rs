@@ -146,7 +146,7 @@ impl SConstant {
 
                 SErgoBox::new(&ergo_box).into()
             }
-            Literal::Coll(_) => todo!(),
+            Literal::Coll(v) => SColl::from(v).into(),
             Literal::Opt(_) => todo!(),
             Literal::Tup(_) => todo!(),
         };
@@ -222,6 +222,24 @@ impl TryFrom<JsValue> for SLiteral {
     }
 }
 
+impl From<SLiteral> for JsValue {
+    fn from(value: SLiteral) -> Self {
+        match value {
+            SLiteral::Unit(v) => v.into(),
+            SLiteral::Boolean(v) => v.into(),
+            SLiteral::Byte(v) => v.into(),
+            SLiteral::Short(v) => v.into(),
+            SLiteral::Int(v) => v.into(),
+            SLiteral::Long(v) => v.into(),
+            SLiteral::BigInt(v) => v.into(),
+            SLiteral::SigmaProp(v) => v.into(),
+            SLiteral::GroupElement(v) => v.into(),
+            SLiteral::ErgoBox(v) => v.into(),
+            SLiteral::Coll(v) => v.into(),
+        }
+    }
+}
+
 impl From<SLiteral> for Literal {
     fn from(v: SLiteral) -> Self {
         match v {
@@ -240,6 +258,27 @@ impl From<SLiteral> for Literal {
     }
 }
 
+impl From<Literal> for SLiteral {
+    fn from(v: Literal) -> Self {
+        match v {
+            Literal::Unit => SLiteral::Unit(SUnit),
+            Literal::Boolean(b) => SLiteral::Boolean(b.into()),
+            Literal::Byte(v) => SLiteral::Byte(v.into()),
+            Literal::Short(v) => SLiteral::Short(v.into()),
+            Literal::Int(v) => SLiteral::Int(v.into()),
+            Literal::Long(v) => SLiteral::Long(v.into()),
+            Literal::BigInt(v) => SLiteral::BigInt(v.into()),
+            Literal::SigmaProp(v) => SLiteral::SigmaProp((*v).into()),
+            Literal::GroupElement(v) => SLiteral::GroupElement((*v).into()),
+            Literal::AvlTree(_) => todo!(),
+            Literal::CBox(v) => SLiteral::ErgoBox((&*v).clone().into()),
+            Literal::Coll(v) => SLiteral::Coll(v.into()),
+            Literal::Opt(_) => todo!(),
+            Literal::Tup(_) => todo!(),
+        }
+    }
+}
+
 impl TryFrom<SLiteral> for Constant {
     type Error = JsValue;
 
@@ -252,7 +291,7 @@ macro_rules! impl_primitive_constant_literal {
     ($l:ident, $ty:tt) => {
         #[derive(TryFromJsValue)]
         #[wasm_bindgen]
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, From, Into)]
         pub struct $l($ty);
 
         #[wasm_bindgen]
@@ -323,7 +362,7 @@ impl From<SUnit> for Literal {
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From, Into)]
 pub struct SLong(i64);
 
 #[wasm_bindgen]
@@ -355,7 +394,7 @@ impl From<SLong> for Literal {
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From, Into)]
 pub struct SBigInt(BigInt256);
 
 #[wasm_bindgen]
@@ -494,7 +533,7 @@ impl TryFrom<Vec<u8>> for SGroupElement {
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From, Into)]
 pub struct SErgoBox(NativeErgoBox);
 
 #[wasm_bindgen]
@@ -527,10 +566,7 @@ impl From<SErgoBox> for Literal {
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
-pub struct SColl {
-    values: Vec<SLiteral>,
-    js_value: Array,
-}
+pub struct SColl(Vec<SLiteral>);
 
 #[wasm_bindgen]
 impl SColl {
@@ -547,10 +583,7 @@ impl SColl {
             coll.push(js.try_into()?)
         }
 
-        Ok(SColl {
-            values: coll,
-            js_value: arr,
-        })
+        Ok(SColl(coll))
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
@@ -567,7 +600,13 @@ impl SColl {
 
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> Array {
-        self.js_value.clone()
+        let arr = Array::new();
+
+        for v in self.0.iter() {
+            arr.push(&JsValue::from(v.clone()));
+        }
+
+        arr
     }
 }
 
@@ -575,7 +614,7 @@ impl SColl {
     fn elem_tpe(&self) -> SType {
         // when creating a `SColl` we should check that it is valid
         // in the constructor so `unwrap()` is safe here
-        self.values.get(0).unwrap().dyn_stype()
+        self.0.get(0).unwrap().dyn_stype()
     }
 }
 
@@ -588,7 +627,7 @@ impl DynLiftIntoSType for SColl {
 impl From<SColl> for Literal {
     fn from(value: SColl) -> Self {
         let items = value
-            .values
+            .0
             .iter()
             .map(|v| v.clone().into())
             .collect::<Vec<Literal>>();
@@ -597,5 +636,17 @@ impl From<SColl> for Literal {
             elem_tpe: value.elem_tpe(),
             items,
         })
+    }
+}
+
+impl From<CollKind<Literal>> for SColl {
+    fn from(coll: CollKind<Literal>) -> Self {
+        let values = coll
+            .as_vec()
+            .into_iter()
+            .map(SLiteral::from)
+            .collect::<Vec<_>>();
+
+        Self(values)
     }
 }
