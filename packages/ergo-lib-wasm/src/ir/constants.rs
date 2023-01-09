@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use crate::prelude::*;
 use crate::{blockchain::ergo_box::ErgoBox, js::extract_classname};
+use derive_more::{From, Into};
 use ergo_lib::ergo_chain_types::Base16DecodedBytes;
 use ergo_lib::{
     ergo_chain_types::EcPoint,
@@ -43,42 +46,22 @@ extern "C" {
         typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] | SErgoBox[] | SColl[]"
     )]
     pub type TsSLiteralArrayType;
+
+    pub type SLiteralLike;
+
+    #[wasm_bindgen(method, getter, js_name = value)]
+    fn get_value(this: &SLiteralLike) -> JsValue;
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SConstant {
-    inner: Constant,
-    /// The `JsValue` used to create this `SConstant`.
-    ///
-    /// For example a class instance of `SByte` / `SColl` / etc.
-    /// Kept alive so we can retrieve the JS value used to
-    /// create this constant. Will be `None` if the constant
-    /// wasn't created in JS, i.e it was retrieved from a box register
-    /// or some other external data source.
-    created_from: Option<JsValue>,
-}
-
-impl From<Constant> for SConstant {
-    fn from(v: Constant) -> Self {
-        Self {
-            inner: v,
-            created_from: None,
-        }
-    }
-}
-
-impl From<SConstant> for Constant {
-    fn from(v: SConstant) -> Self {
-        v.inner
-    }
-}
+#[derive(Debug, Clone, From, Into)]
+pub struct SConstant(Constant);
 
 #[wasm_bindgen]
 impl SConstant {
     #[wasm_bindgen(js_name = toHex)]
     pub fn to_hex(&self) -> Result<String, JsValue> {
-        self.inner.base16_str().map_err_js_value()
+        self.0.base16_str().map_err_js_value()
     }
 
     #[wasm_bindgen(js_name = fromHex)]
@@ -86,48 +69,60 @@ impl SConstant {
         let bytes = Base16DecodedBytes::try_from(hex).map_err_js_value()?;
         let inner = Constant::try_from(bytes).map_err_js_value()?;
 
-        Ok(SConstant {
-            inner,
-            created_from: Some(hex.into()),
-        })
+        Ok(inner.into())
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &Uint8Array) -> Result<SConstant, JsValue> {
         let inner = Constant::try_from(bytes.to_vec()).map_err_js_value()?;
 
-        Ok(SConstant {
-            inner,
-            created_from: Some(bytes.into()),
-        })
+        Ok(inner.into())
     }
 
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
-        self.inner.sigma_serialize_bytes().map_err_js_value()
+        self.0.sigma_serialize_bytes().map_err_js_value()
     }
 
-    /// The JS value that was used to create this constant.
-    /// Will be `undefined` if the constant wasn't created via JS,
-    /// i.e it was retrieved from an ergo box register or some other
-    /// external source.
-    #[wasm_bindgen(getter, js_name = createdFrom)]
-    pub fn created_from(&self) -> JsValue {
-        if let Some(v) = &self.created_from {
-            v.clone()
-        } else {
-            JsValue::UNDEFINED
-        }
+    #[wasm_bindgen(getter)]
+    pub fn literal(&self) -> Result<TsSLiteralType, JsValue> {
+        let v: JsValue = match self.0.v.clone() {
+            Literal::Unit => SUnit::new().into(),
+            Literal::Boolean(v) => SBoolean::new(v).into(),
+            Literal::Byte(v) => SByte::new(v).into(),
+            Literal::Short(v) => SShort::new(v).into(),
+            Literal::Int(v) => SInt::new(v).into(),
+            Literal::Long(v) => SLong::new(js_sys::BigInt::from(v))?.into(),
+            Literal::BigInt(v) => {
+                SBigInt::new(js_sys::BigInt::from_str(v.to_string().as_str())?)?.into()
+            }
+            Literal::SigmaProp(v) => SSigmaProp::from(*v).into(),
+            Literal::GroupElement(v) => {
+                SGroupElement::try_from((*v).sigma_serialize_bytes().map_err_js_value()?)?.into()
+            }
+            Literal::AvlTree(_) => todo!(),
+            Literal::CBox(v) => {
+                let native_box = &*v;
+                let ergo_box = ErgoBox::from(native_box.clone());
+
+                SErgoBox::new(&ergo_box).into()
+            }
+            Literal::Coll(v) => SColl::from(v).into(),
+            Literal::Opt(_) => todo!(),
+            Literal::Tup(_) => todo!(),
+        };
+
+        Ok(v.into())
     }
 
     #[wasm_bindgen(getter, js_name = typeStr)]
     pub fn tpe(&self) -> String {
-        format!("{:?}", self.inner.tpe)
+        format!("{:?}", self.0.tpe)
     }
 
     #[wasm_bindgen]
     pub fn dbg(&self) -> String {
-        format!("{:?}", self.inner)
+        format!("{:?}", self.0)
     }
 }
 
@@ -142,7 +137,7 @@ pub enum SLiteral {
     BigInt(SBigInt),
     SigmaProp(SSigmaProp),
     GroupElement(SGroupElement),
-    ErgoBox(SErgoBox),
+    ErgoBox(Box<SErgoBox>),
     Coll(SColl),
 }
 
@@ -188,6 +183,24 @@ impl TryFrom<JsValue> for SLiteral {
     }
 }
 
+impl From<SLiteral> for JsValue {
+    fn from(value: SLiteral) -> Self {
+        match value {
+            SLiteral::Unit(v) => v.into(),
+            SLiteral::Boolean(v) => v.into(),
+            SLiteral::Byte(v) => v.into(),
+            SLiteral::Short(v) => v.into(),
+            SLiteral::Int(v) => v.into(),
+            SLiteral::Long(v) => v.into(),
+            SLiteral::BigInt(v) => v.into(),
+            SLiteral::SigmaProp(v) => v.into(),
+            SLiteral::GroupElement(v) => v.into(),
+            SLiteral::ErgoBox(v) => (*v).into(),
+            SLiteral::Coll(v) => v.into(),
+        }
+    }
+}
+
 impl From<SLiteral> for Literal {
     fn from(v: SLiteral) -> Self {
         match v {
@@ -200,8 +213,29 @@ impl From<SLiteral> for Literal {
             SLiteral::BigInt(v) => v.into(),
             SLiteral::SigmaProp(v) => v.into(),
             SLiteral::GroupElement(v) => v.into(),
-            SLiteral::ErgoBox(v) => v.into(),
+            SLiteral::ErgoBox(v) => (*v).into(),
             SLiteral::Coll(v) => v.into(),
+        }
+    }
+}
+
+impl From<Literal> for SLiteral {
+    fn from(v: Literal) -> Self {
+        match v {
+            Literal::Unit => SLiteral::Unit(SUnit),
+            Literal::Boolean(b) => SLiteral::Boolean(b.into()),
+            Literal::Byte(v) => SLiteral::Byte(v.into()),
+            Literal::Short(v) => SLiteral::Short(v.into()),
+            Literal::Int(v) => SLiteral::Int(v.into()),
+            Literal::Long(v) => SLiteral::Long(v.into()),
+            Literal::BigInt(v) => SLiteral::BigInt(v.into()),
+            Literal::SigmaProp(v) => SLiteral::SigmaProp((*v).into()),
+            Literal::GroupElement(v) => SLiteral::GroupElement((*v).into()),
+            Literal::AvlTree(_) => todo!(),
+            Literal::CBox(v) => SLiteral::ErgoBox(Box::new((*v).clone().into())),
+            Literal::Coll(v) => SLiteral::Coll(v.into()),
+            Literal::Opt(_) => todo!(),
+            Literal::Tup(_) => todo!(),
         }
     }
 }
@@ -218,7 +252,7 @@ macro_rules! impl_primitive_constant_literal {
     ($l:ident, $ty:tt) => {
         #[derive(TryFromJsValue)]
         #[wasm_bindgen]
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, From, Into)]
         pub struct $l($ty);
 
         #[wasm_bindgen]
@@ -235,10 +269,9 @@ macro_rules! impl_primitive_constant_literal {
 
             #[wasm_bindgen(js_name = intoConstant)]
             pub fn into_constant(self) -> SConstant {
-                SConstant {
-                    inner: self.0.into(),
-                    created_from: Some(self.into()),
-                }
+                let constant: Constant = self.0.into();
+
+                constant.into()
             }
         }
 
@@ -268,11 +301,8 @@ impl SUnit {
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> Result<SConstant, JsValue> {
-        Ok(SConstant {
-            inner: ().into(),
-            created_from: Some(self.into()),
-        })
+    pub fn into_constant(self) -> SConstant {
+        SConstant(().into())
     }
 
     #[wasm_bindgen(getter)]
@@ -289,7 +319,7 @@ impl From<SUnit> for Literal {
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, From, Into)]
 pub struct SLong(i64);
 
 #[wasm_bindgen]
@@ -306,10 +336,7 @@ impl SLong {
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
-        SConstant {
-            inner: self.0.into(),
-            created_from: Some(self.into()),
-        }
+        SConstant(self.0.into())
     }
 }
 
@@ -321,11 +348,8 @@ impl From<SLong> for Literal {
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SBigInt {
-    value: BigInt256,
-    js_value: js_sys::BigInt,
-}
+#[derive(Debug, Clone, From, Into)]
+pub struct SBigInt(BigInt256);
 
 #[wasm_bindgen]
 impl SBigInt {
@@ -339,171 +363,162 @@ impl SBigInt {
             .ok_or_else(|| JsValue::from_str("failed to convert JS string"))?;
         let bi = BigInt256::from_str_radix(&s, radix as u32).map_err_js_value()?;
 
-        Ok(SBigInt {
-            value: bi,
-            js_value,
-        })
+        Ok(SBigInt(bi))
     }
 
     #[wasm_bindgen(getter)]
-    pub fn value(&self) -> js_sys::BigInt {
-        self.js_value.clone()
+    pub fn value(&self) -> Result<js_sys::BigInt, JsValue> {
+        let s = self.0.to_string();
+
+        js_sys::BigInt::from_str(s.as_str()).map_err_js_value()
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
-        SConstant {
-            inner: self.value.clone().into(),
-            created_from: Some(self.into()),
-        }
+        SConstant(self.0.into())
     }
 }
 
 impl From<SBigInt> for Literal {
     fn from(bigint: SBigInt) -> Self {
-        bigint.value.into()
+        bigint.0.into()
     }
 }
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SSigmaProp {
-    value: SigmaProp,
-    js_value: JsValue,
-}
+#[derive(Debug, Clone, From, Into)]
+pub struct SSigmaProp(SigmaProp);
 
 #[wasm_bindgen]
 impl SSigmaProp {
     #[wasm_bindgen(js_name = fromJSON)]
     pub fn from_json(json: &str) -> Result<SSigmaProp, JsValue> {
         let value: SigmaBoolean = serde_json::from_str(json).map_err_js_value()?;
+        let prop: SigmaProp = value.into();
 
-        Ok(SSigmaProp {
-            value: value.into(),
-            js_value: json.into(),
-        })
+        Ok(prop.into())
     }
 
     #[wasm_bindgen(js_name = fromBool)]
     pub fn from_bool(bool: bool) -> SSigmaProp {
-        SSigmaProp {
-            value: SigmaProp::new(bool.into()),
-            js_value: bool.into(),
-        }
+        SigmaProp::new(bool.into()).into()
     }
 
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> JsValue {
-        self.js_value.clone()
+        match self.0.value() {
+            SigmaBoolean::TrivialProp(bool) => (*bool).into(),
+            SigmaBoolean::ProofOfKnowledge(_) => todo!(),
+            SigmaBoolean::SigmaConjecture(_) => todo!(),
+        }
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
-        SConstant {
-            inner: self.value.clone().into(),
-            created_from: Some(self.into()),
-        }
+        SConstant(self.0.into())
     }
 }
 
 impl From<SSigmaProp> for Literal {
     fn from(prop: SSigmaProp) -> Self {
-        prop.value.into()
+        prop.0.into()
     }
 }
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SGroupElement {
-    value: EcPoint,
-    js_value: JsValue,
-}
+#[derive(Debug, Clone, From, Into)]
+pub struct SGroupElement(EcPoint);
 
 #[wasm_bindgen]
 impl SGroupElement {
     #[wasm_bindgen(js_name = fromHex)]
     pub fn from_hex(hex: &str) -> Result<SGroupElement, JsValue> {
-        Ok(SGroupElement {
-            value: hex.to_string().try_into().map_err_js_value()?,
-            js_value: hex.into(),
-        })
+        let ec: EcPoint = hex.to_string().try_into().map_err_js_value()?;
+
+        Ok(ec.into())
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &Uint8Array) -> Result<SGroupElement, JsValue> {
-        Ok(SGroupElement {
-            value: EcPoint::sigma_parse_bytes(&bytes.to_vec()).map_err_js_value()?,
-            js_value: bytes.into(),
-        })
+        let ec = EcPoint::sigma_parse_bytes(&bytes.to_vec()).map_err_js_value()?;
+
+        Ok(ec.into())
     }
 
     #[wasm_bindgen(getter)]
-    pub fn value(&self) -> JsValue {
-        self.js_value.clone()
+    pub fn value(&self) -> Result<Uint8Array, JsValue> {
+        let bytes = self.0.sigma_serialize_bytes().map_err_js_value()?;
+
+        Ok(Uint8Array::from(bytes.as_slice()))
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
-        SConstant {
-            inner: self.value.clone().into(),
-            created_from: Some(self.into()),
-        }
+        SConstant(self.0.into())
     }
 }
 
 impl From<SGroupElement> for Literal {
     fn from(prop: SGroupElement) -> Self {
-        prop.value.into()
+        prop.0.into()
+    }
+}
+
+impl TryFrom<Vec<u8>> for SGroupElement {
+    type Error = JsValue;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        let arr = Uint8Array::from(value.as_slice());
+
+        Self::from_bytes(&arr)
     }
 }
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
-#[derive(Debug, Clone)]
-pub struct SErgoBox {
-    value: NativeErgoBox,
-    js_value: ErgoBox,
-}
+#[derive(Debug, Clone, From, Into)]
+pub struct SErgoBox(NativeErgoBox);
 
 #[wasm_bindgen]
 impl SErgoBox {
     #[wasm_bindgen(constructor)]
     pub fn new(ergo_box: &ErgoBox) -> SErgoBox {
-        SErgoBox {
-            value: ergo_box.clone().into(),
-            js_value: ergo_box.clone(),
-        }
+        SErgoBox(ergo_box.clone().into())
     }
 
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> ErgoBox {
-        self.js_value.clone()
+        self.0.clone().into()
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
-        SConstant {
-            inner: self.value.clone().into(),
-            created_from: Some(self.into()),
-        }
+        SConstant(self.0.into())
     }
 }
 
 impl From<SErgoBox> for Literal {
     fn from(prop: SErgoBox) -> Self {
-        prop.value.into()
+        prop.0.into()
+    }
+}
+
+impl TryFrom<&JsValue> for Box<SErgoBox> {
+    type Error = JsValue;
+
+    fn try_from(value: &JsValue) -> Result<Self, Self::Error> {
+        let ergo_box = value.try_into()?;
+
+        Ok(Box::new(ergo_box))
     }
 }
 
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
-pub struct SColl {
-    values: Vec<SLiteral>,
-    js_value: Array,
-}
+pub struct SColl(Vec<SLiteral>);
 
 #[wasm_bindgen]
 impl SColl {
@@ -520,27 +535,30 @@ impl SColl {
             coll.push(js.try_into()?)
         }
 
-        Ok(SColl {
-            values: coll,
-            js_value: arr,
-        })
+        Ok(SColl(coll))
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> Result<SConstant, JsValue> {
-        let inner: Constant = Value::from(Literal::from(self.clone()))
+        let inner: Constant = Value::from(Literal::from(self))
             .try_into()
             .map_err_js_value()?;
 
-        Ok(SConstant {
-            inner,
-            created_from: Some(self.into()),
-        })
+        Ok(SConstant(inner))
     }
 
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> Array {
-        self.js_value.clone()
+        let arr = Array::new();
+
+        for v in self.0.iter() {
+            let js_value = JsValue::from(v.clone());
+            let literal = SLiteralLike::from(js_value);
+
+            arr.push(&literal.get_value());
+        }
+
+        arr
     }
 }
 
@@ -548,7 +566,7 @@ impl SColl {
     fn elem_tpe(&self) -> SType {
         // when creating a `SColl` we should check that it is valid
         // in the constructor so `unwrap()` is safe here
-        self.values.get(0).unwrap().dyn_stype()
+        self.0.get(0).unwrap().dyn_stype()
     }
 }
 
@@ -561,7 +579,7 @@ impl DynLiftIntoSType for SColl {
 impl From<SColl> for Literal {
     fn from(value: SColl) -> Self {
         let items = value
-            .values
+            .0
             .iter()
             .map(|v| v.clone().into())
             .collect::<Vec<Literal>>();
@@ -570,5 +588,17 @@ impl From<SColl> for Literal {
             elem_tpe: value.elem_tpe(),
             items,
         })
+    }
+}
+
+impl From<CollKind<Literal>> for SColl {
+    fn from(coll: CollKind<Literal>) -> Self {
+        let values = coll
+            .as_vec()
+            .into_iter()
+            .map(SLiteral::from)
+            .collect::<Vec<_>>();
+
+        Self(values)
     }
 }

@@ -10,6 +10,7 @@ import {
   ErgoBox,
   SErgoBox,
   SConstant,
+  SBoolean,
 } from "../../";
 
 describe("Constants", () => {
@@ -155,6 +156,34 @@ describe("Constants", () => {
           "STuple([SColl(STuple([SColl(SByte), SColl(SByte)])), STuple([SColl(STuple([SColl(SByte), STuple([SInt, SInt])])), SColl(STuple([SColl(SByte), STuple([SInt, SInt])]))])])"
         );
       });
+    });
+  });
+  describe("Conversion to JS value", () => {
+    it("should convert collection of SInt to array of int", () => {
+      const { value } = new SColl([
+        new SInt(4),
+        new SInt(1),
+        new SInt(2),
+        new SInt(5),
+        new SInt(0),
+        new SInt(2),
+        new SInt(8),
+      ]);
+      const expected = [4, 1, 2, 5, 0, 2, 8];
+
+      expect(value).toEqual(expected);
+    });
+    it("should handle nested collections", () => {
+      const { value } = new SColl([
+        new SColl([new SBoolean(true), new SBoolean(true)]),
+        new SColl([new SBoolean(false), new SBoolean(true)]),
+      ]);
+      const expected = [
+        [true, true],
+        [false, true],
+      ];
+
+      expect(value).toEqual(expected);
     });
   });
 });
