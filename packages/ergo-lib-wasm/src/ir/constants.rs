@@ -137,7 +137,7 @@ pub enum SLiteral {
     BigInt(SBigInt),
     SigmaProp(SSigmaProp),
     GroupElement(SGroupElement),
-    ErgoBox(SErgoBox),
+    ErgoBox(Box<SErgoBox>),
     Coll(SColl),
 }
 
@@ -195,7 +195,7 @@ impl From<SLiteral> for JsValue {
             SLiteral::BigInt(v) => v.into(),
             SLiteral::SigmaProp(v) => v.into(),
             SLiteral::GroupElement(v) => v.into(),
-            SLiteral::ErgoBox(v) => v.into(),
+            SLiteral::ErgoBox(v) => (*v).into(),
             SLiteral::Coll(v) => v.into(),
         }
     }
@@ -213,7 +213,7 @@ impl From<SLiteral> for Literal {
             SLiteral::BigInt(v) => v.into(),
             SLiteral::SigmaProp(v) => v.into(),
             SLiteral::GroupElement(v) => v.into(),
-            SLiteral::ErgoBox(v) => v.into(),
+            SLiteral::ErgoBox(v) => (*v).into(),
             SLiteral::Coll(v) => v.into(),
         }
     }
@@ -230,9 +230,9 @@ impl From<Literal> for SLiteral {
             Literal::Long(v) => SLiteral::Long(v.into()),
             Literal::BigInt(v) => SLiteral::BigInt(v.into()),
             Literal::SigmaProp(v) => SLiteral::SigmaProp((*v).into()),
-            Literal::GroupElement(v) => SLiteral::GroupElement(v.into()),
+            Literal::GroupElement(v) => SLiteral::GroupElement((*v).into()),
             Literal::AvlTree(_) => todo!(),
-            Literal::CBox(v) => SLiteral::ErgoBox((*v).clone().into()),
+            Literal::CBox(v) => SLiteral::ErgoBox(Box::new((*v).clone().into())),
             Literal::Coll(v) => SLiteral::Coll(v.into()),
             Literal::Opt(_) => todo!(),
             Literal::Tup(_) => todo!(),
@@ -429,20 +429,20 @@ impl From<SSigmaProp> for Literal {
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone, From, Into)]
-pub struct SGroupElement(Box<EcPoint>);
+pub struct SGroupElement(EcPoint);
 
 #[wasm_bindgen]
 impl SGroupElement {
     #[wasm_bindgen(js_name = fromHex)]
     pub fn from_hex(hex: &str) -> Result<SGroupElement, JsValue> {
-        let ec: Box<EcPoint> = Box::new(hex.to_string().try_into().map_err_js_value()?);
+        let ec: EcPoint = hex.to_string().try_into().map_err_js_value()?;
 
         Ok(ec.into())
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &Uint8Array) -> Result<SGroupElement, JsValue> {
-        let ec = Box::new(EcPoint::sigma_parse_bytes(&bytes.to_vec()).map_err_js_value()?);
+        let ec = EcPoint::sigma_parse_bytes(&bytes.to_vec()).map_err_js_value()?;
 
         Ok(ec.into())
     }
@@ -456,13 +456,13 @@ impl SGroupElement {
 
     #[wasm_bindgen(js_name = intoConstant)]
     pub fn into_constant(self) -> SConstant {
-        SConstant((*self.0).into())
+        SConstant(self.0.into())
     }
 }
 
 impl From<SGroupElement> for Literal {
     fn from(prop: SGroupElement) -> Self {
-        (*prop.0).into()
+        prop.0.into()
     }
 }
 
@@ -502,6 +502,16 @@ impl SErgoBox {
 impl From<SErgoBox> for Literal {
     fn from(prop: SErgoBox) -> Self {
         prop.0.into()
+    }
+}
+
+impl TryFrom<&JsValue> for Box<SErgoBox> {
+    type Error = JsValue;
+
+    fn try_from(value: &JsValue) -> Result<Self, Self::Error> {
+        let ergo_box = value.try_into()?;
+
+        Ok(Box::new(ergo_box))
     }
 }
 
