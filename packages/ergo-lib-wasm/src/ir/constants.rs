@@ -1,3 +1,5 @@
+pub mod literals;
+
 use std::str::FromStr;
 
 use crate::prelude::*;
@@ -222,7 +224,7 @@ impl From<SLiteral> for Literal {
 impl From<Literal> for SLiteral {
     fn from(v: Literal) -> Self {
         match v {
-            Literal::Unit => SLiteral::Unit(SUnit),
+            Literal::Unit => SLiteral::Unit(SUnit(())),
             Literal::Boolean(b) => SLiteral::Boolean(b.into()),
             Literal::Byte(v) => SLiteral::Byte(v.into()),
             Literal::Short(v) => SLiteral::Short(v.into()),
@@ -266,13 +268,6 @@ macro_rules! impl_primitive_constant_literal {
             pub fn value(&self) -> $ty {
                 self.0.clone()
             }
-
-            #[wasm_bindgen(js_name = intoConstant)]
-            pub fn into_constant(self) -> SConstant {
-                let constant: Constant = self.0.into();
-
-                constant.into()
-            }
         }
 
         impl From<$l> for Literal {
@@ -291,18 +286,13 @@ impl_primitive_constant_literal!(SInt, i32);
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone, Default)]
-pub struct SUnit;
+pub struct SUnit(());
 
 #[wasm_bindgen]
 impl SUnit {
     #[wasm_bindgen(constructor)]
     pub fn new() -> SUnit {
-        Self
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(().into())
+        Self(())
     }
 
     #[wasm_bindgen(getter)]
@@ -332,11 +322,6 @@ impl SLong {
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> js_sys::BigInt {
         js_sys::BigInt::from(self.0)
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -371,11 +356,6 @@ impl SBigInt {
         let s = self.0.to_string();
 
         js_sys::BigInt::from_str(s.as_str()).map_err_js_value()
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -413,11 +393,6 @@ impl SSigmaProp {
             SigmaBoolean::SigmaConjecture(_) => todo!(),
         }
     }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
-    }
 }
 
 impl From<SSigmaProp> for Literal {
@@ -453,11 +428,6 @@ impl SGroupElement {
 
         Ok(Uint8Array::from(bytes.as_slice()))
     }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
-    }
 }
 
 impl From<SGroupElement> for Literal {
@@ -491,11 +461,6 @@ impl SErgoBox {
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> ErgoBox {
         self.0.clone().into()
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -602,3 +567,21 @@ impl From<CollKind<Literal>> for SColl {
         Self(values)
     }
 }
+
+macro_rules! impl_literal_into_constant_method {
+    ($($l:ident)*) => {$(
+        #[wasm_bindgen]
+        impl $l {
+            /// Converts this literal into a {@link SConstant}.
+            /// This method consumes the class instance so it should not be used after calling.
+            #[wasm_bindgen(js_name = intoConstant)]
+            pub fn into_constant(self) -> SConstant {
+                let constant: Constant = self.0.into();
+
+                constant.into()
+            }
+        }
+    )*};
+}
+
+impl_literal_into_constant_method!(SUnit SBoolean SByte SShort SInt SLong SBigInt SSigmaProp SGroupElement SErgoBox);
