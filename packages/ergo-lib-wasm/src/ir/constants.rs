@@ -1,5 +1,3 @@
-pub mod literals;
-
 use std::str::FromStr;
 
 use crate::prelude::*;
