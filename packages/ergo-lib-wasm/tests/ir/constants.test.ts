@@ -11,6 +11,8 @@ import {
   SErgoBox,
   SConstant,
   SBoolean,
+  SShort,
+  SUnit,
 } from "../../";
 
 describe("Constants", () => {
@@ -159,6 +161,23 @@ describe("Constants", () => {
     });
   });
   describe("Conversion to JS value", () => {
+    each([
+      [new SUnit(), null],
+      [new SBoolean(true), true],
+      [new SBoolean(false), false],
+      [new SByte(4), 4],
+      [new SShort(5), 5],
+      [new SInt(11), 11],
+      [new SLong(441222311n), 441222311n],
+      [new SBigInt(4151222225125102098211n), 4151222225125102098211n],
+      [SSigmaProp.fromBool(true), true],
+      [SSigmaProp.fromBool(false), false],
+    ]).it(
+      "should convert simple literal values to the correct JS value",
+      (literal, value) => {
+        expect(literal.value).toEqual(value);
+      }
+    );
     it("should convert collection of SInt to array of int", () => {
       const { value } = new SColl([
         new SInt(4),

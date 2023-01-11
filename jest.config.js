@@ -1,3 +1,4 @@
+/** @type {import('ts-jest').JestConfigWithTsJest} */
 const path = require("path");
 const fs = require("fs");
 
@@ -11,6 +12,17 @@ const projects = packageNames.map((displayName) => ({
   testEnvironment: "node",
   displayName,
   testMatch: [`<rootDir>/packages/${displayName}/**/*.test.ts`],
+  transform: {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        tsconfig: {
+          target: "ES2020",
+          esModuleInterop: true,
+        },
+      },
+    ],
+  },
 }));
 
 module.exports = {

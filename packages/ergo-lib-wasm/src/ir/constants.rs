@@ -59,11 +59,13 @@ pub struct SConstant(Constant);
 
 #[wasm_bindgen]
 impl SConstant {
+    /// Convert the {@link SConstant} to a hex string.
     #[wasm_bindgen(js_name = toHex)]
     pub fn to_hex(&self) -> Result<String, JsValue> {
         self.0.base16_str().map_err_js_value()
     }
 
+    /// Create a {@link SConstant} from the provided hex string.
     #[wasm_bindgen(js_name = fromHex)]
     pub fn from_hex(hex: &str) -> Result<SConstant, JsValue> {
         let bytes = Base16DecodedBytes::try_from(hex).map_err_js_value()?;
@@ -72,6 +74,7 @@ impl SConstant {
         Ok(inner.into())
     }
 
+    /// Create a {@link SConstant} from the provided byte array.
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &Uint8Array) -> Result<SConstant, JsValue> {
         let inner = Constant::try_from(bytes.to_vec()).map_err_js_value()?;
@@ -79,11 +82,13 @@ impl SConstant {
         Ok(inner.into())
     }
 
+    /// Convert the {@link SConstant} to a byte array.
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Result<Vec<u8>, JsValue> {
         self.0.sigma_serialize_bytes().map_err_js_value()
     }
 
+    /// Extract the literal value of this {@link SConstant} instance.
     #[wasm_bindgen(getter)]
     pub fn literal(&self) -> Result<TsSLiteralType, JsValue> {
         let v: JsValue = match self.0.v.clone() {
@@ -115,11 +120,14 @@ impl SConstant {
         Ok(v.into())
     }
 
+    /// Get the type of the {@link SConstant} instance.
+    /// For example: "SColl(SByte)"
     #[wasm_bindgen(getter, js_name = typeStr)]
     pub fn tpe(&self) -> String {
         format!("{:?}", self.0.tpe)
     }
 
+    /// Get a debug string representation of the {@link SConstant} instance.
     #[wasm_bindgen]
     pub fn dbg(&self) -> String {
         format!("{:?}", self.0)
@@ -222,7 +230,7 @@ impl From<SLiteral> for Literal {
 impl From<Literal> for SLiteral {
     fn from(v: Literal) -> Self {
         match v {
-            Literal::Unit => SLiteral::Unit(SUnit),
+            Literal::Unit => SLiteral::Unit(SUnit(())),
             Literal::Boolean(b) => SLiteral::Boolean(b.into()),
             Literal::Byte(v) => SLiteral::Byte(v.into()),
             Literal::Short(v) => SLiteral::Short(v.into()),
@@ -262,16 +270,10 @@ macro_rules! impl_primitive_constant_literal {
                 Self(value)
             }
 
+            /// Convert the instance into it's JS value equivalent.
             #[wasm_bindgen(getter)]
             pub fn value(&self) -> $ty {
                 self.0.clone()
-            }
-
-            #[wasm_bindgen(js_name = intoConstant)]
-            pub fn into_constant(self) -> SConstant {
-                let constant: Constant = self.0.into();
-
-                constant.into()
             }
         }
 
@@ -291,20 +293,17 @@ impl_primitive_constant_literal!(SInt, i32);
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone, Default)]
-pub struct SUnit;
+pub struct SUnit(());
 
 #[wasm_bindgen]
 impl SUnit {
+    /// Create a {@link SUnit} instance.
     #[wasm_bindgen(constructor)]
     pub fn new() -> SUnit {
-        Self
+        Self(())
     }
 
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(().into())
-    }
-
+    /// Convert the instance into it's JS value equivalent.
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> JsValue {
         JsValue::NULL
@@ -324,19 +323,18 @@ pub struct SLong(i64);
 
 #[wasm_bindgen]
 impl SLong {
+    /// Create a {@link SLong} from the provided {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt BigInt}.
+    ///
+    /// We need to use {@external BigInt} because JavaScript numbers don't support the max value of i64.
     #[wasm_bindgen(constructor)]
     pub fn new(value: js_sys::BigInt) -> Result<SLong, JsValue> {
         Ok(Self(value.try_into().map_err_js_value()?))
     }
 
+    /// Convert the instance into it's JS value equivalent.
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> js_sys::BigInt {
         js_sys::BigInt::from(self.0)
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -353,6 +351,7 @@ pub struct SBigInt(BigInt256);
 
 #[wasm_bindgen]
 impl SBigInt {
+    /// Create a {@link SBigInt} from the provided {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt BigInt}.
     #[wasm_bindgen(constructor)]
     pub fn new(js_value: js_sys::BigInt) -> Result<SBigInt, JsValue> {
         let radix = 10;
@@ -366,16 +365,12 @@ impl SBigInt {
         Ok(SBigInt(bi))
     }
 
+    /// Convert the instance into it's JS value equivalent.
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> Result<js_sys::BigInt, JsValue> {
         let s = self.0.to_string();
 
         js_sys::BigInt::from_str(s.as_str()).map_err_js_value()
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -392,6 +387,7 @@ pub struct SSigmaProp(SigmaProp);
 
 #[wasm_bindgen]
 impl SSigmaProp {
+    /// Create a {@link SSigmaProp} instance from the provided JSON string.
     #[wasm_bindgen(js_name = fromJSON)]
     pub fn from_json(json: &str) -> Result<SSigmaProp, JsValue> {
         let value: SigmaBoolean = serde_json::from_str(json).map_err_js_value()?;
@@ -400,11 +396,13 @@ impl SSigmaProp {
         Ok(prop.into())
     }
 
+    /// Create a trivial {@link SSigmaProp} instance from the provided boolean value.
     #[wasm_bindgen(js_name = fromBool)]
     pub fn from_bool(bool: bool) -> SSigmaProp {
         SigmaProp::new(bool.into()).into()
     }
 
+    /// Convert the instance into it's JS value equivalent.
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> JsValue {
         match self.0.value() {
@@ -412,11 +410,6 @@ impl SSigmaProp {
             SigmaBoolean::ProofOfKnowledge(_) => todo!(),
             SigmaBoolean::SigmaConjecture(_) => todo!(),
         }
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -433,6 +426,7 @@ pub struct SGroupElement(EcPoint);
 
 #[wasm_bindgen]
 impl SGroupElement {
+    /// Create a {@link SGroupElement} from the provided hex string.
     #[wasm_bindgen(js_name = fromHex)]
     pub fn from_hex(hex: &str) -> Result<SGroupElement, JsValue> {
         let ec: EcPoint = hex.to_string().try_into().map_err_js_value()?;
@@ -440,6 +434,7 @@ impl SGroupElement {
         Ok(ec.into())
     }
 
+    /// Create a {@link SGroupElement} from the provided byte array.
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &Uint8Array) -> Result<SGroupElement, JsValue> {
         let ec = EcPoint::sigma_parse_bytes(&bytes.to_vec()).map_err_js_value()?;
@@ -447,16 +442,12 @@ impl SGroupElement {
         Ok(ec.into())
     }
 
+    /// Convert the instance into it's JS value equivalent.
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> Result<Uint8Array, JsValue> {
         let bytes = self.0.sigma_serialize_bytes().map_err_js_value()?;
 
         Ok(Uint8Array::from(bytes.as_slice()))
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -488,14 +479,10 @@ impl SErgoBox {
         SErgoBox(ergo_box.clone().into())
     }
 
+    /// Convert the instance into it's JS value equivalent.
     #[wasm_bindgen(getter)]
     pub fn value(&self) -> ErgoBox {
         self.0.clone().into()
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> SConstant {
-        SConstant(self.0.into())
     }
 }
 
@@ -602,3 +589,22 @@ impl From<CollKind<Literal>> for SColl {
         Self(values)
     }
 }
+
+macro_rules! impl_literal_into_constant_method {
+    ($($l:ident)*) => {$(
+        #[wasm_bindgen]
+        impl $l {
+            /// Converts this literal into a {@link SConstant}.
+            /// This method consumes the class instance so it should not be used after calling.
+            #[wasm_bindgen(js_name = intoConstant)]
+            pub fn into_constant(self) -> SConstant {
+                let constant: Constant = self.0.into();
+
+                constant.into()
+            }
+        }
+    )*};
+}
+
+// Provide a method of `intoConstant` for each of the types with JS documentation
+impl_literal_into_constant_method!(SUnit SBoolean SByte SShort SInt SLong SBigInt SSigmaProp SGroupElement SErgoBox);
