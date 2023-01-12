@@ -13,6 +13,7 @@ import {
   SBoolean,
   SShort,
   SUnit,
+  SType,
 } from "../../";
 
 describe("Constants", () => {
@@ -203,6 +204,15 @@ describe("Constants", () => {
       ];
 
       expect(value).toEqual(expected);
+    });
+  });
+  describe("SColl", () => {
+    it("should handle empty collection", () => {
+      const nonEmptyColl = new SColl([new SByte(4)]);
+      const emptyColl = SColl.emptyOfType(SType.byte());
+      const coll = new SColl([nonEmptyColl, emptyColl]).intoConstant();
+
+      expect(coll.typeStr).toBe("SColl(SColl(SByte))");
     });
   });
 });
