@@ -520,6 +520,7 @@ impl SColl {
         // TODO: should we validate the js array input?
         // I.e ensure the following:
         //  - ensure all elements of same type
+        //  - must be at least 1 element
         let mut coll: Vec<SLiteral> = vec![];
         let arr = Array::from(js_coll);
 
