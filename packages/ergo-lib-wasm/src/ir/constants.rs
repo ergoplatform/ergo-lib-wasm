@@ -47,6 +47,8 @@ extern "C" {
     )]
     pub type TsSLiteralArrayType;
 
+    /// This is a JS of type TsSLiteralType basically.
+    /// It allows us to treat a list of TsSLiteralType values polymorphically and call funcs.
     pub type SLiteralLike;
 
     #[wasm_bindgen(method, getter, js_name = value)]
@@ -147,6 +149,7 @@ pub enum SLiteral {
     GroupElement(SGroupElement),
     ErgoBox(Box<SErgoBox>),
     Coll(SColl),
+    Tuple(STuple),
 }
 
 impl DynLiftIntoSType for SLiteral {
@@ -163,6 +166,7 @@ impl DynLiftIntoSType for SLiteral {
             SLiteral::GroupElement(_) => SType::SGroupElement,
             SLiteral::ErgoBox(_) => SType::SBox,
             SLiteral::Coll(v) => v.dyn_stype(),
+            SLiteral::Tuple(v) => v.dyn_stype(),
         }
     }
 }
@@ -186,6 +190,7 @@ impl TryFrom<JsValue> for SLiteral {
             "SGroupElement" => Ok(SLiteral::GroupElement(vref.try_into()?)),
             "SErgoBox" => Ok(SLiteral::ErgoBox(vref.try_into()?)),
             "SColl" => Ok(SLiteral::Coll(vref.try_into()?)),
+            "STuple" => Ok(SLiteral::Tuple(vref.try_into()?)),
             _ => Err(format!("SLiteral: unknown class '{}'", object_classname).into()),
         }
     }
@@ -205,6 +210,7 @@ impl From<SLiteral> for JsValue {
             SLiteral::GroupElement(v) => v.into(),
             SLiteral::ErgoBox(v) => (*v).into(),
             SLiteral::Coll(v) => v.into(),
+            SLiteral::Tuple(v) => v.into(),
         }
     }
 }
@@ -223,6 +229,7 @@ impl From<SLiteral> for Literal {
             SLiteral::GroupElement(v) => v.into(),
             SLiteral::ErgoBox(v) => (*v).into(),
             SLiteral::Coll(v) => v.into(),
+            SLiteral::Tuple(v) => v.into(),
         }
     }
 }
@@ -517,21 +524,31 @@ pub struct SColl {
 impl SColl {
     #[wasm_bindgen(constructor)]
     pub fn new(js_coll: &TsSLiteralArrayType) -> Result<SColl, JsValue> {
-        // TODO: should we validate the js array input?
-        // I.e ensure the following:
-        //  - ensure all elements of same type
-        //  - must be at least 1 element
         let mut coll: Vec<SLiteral> = vec![];
         let arr = Array::from(js_coll);
+
+        if arr.length() < 1 {
+            return Err(JsValue::from_str(
+                "SColl constructor requires array with at least 1 element, use SColl.emptyOfType if you need a empty collection",
+            ));
+        }
 
         for js in arr.iter() {
             coll.push(js.try_into()?)
         }
 
-        Ok(SColl {
-            values: coll,
-            provided_type: None,
-        })
+        let coll_tpe = coll[0].dyn_stype();
+
+        if coll.iter().all(|l| l.dyn_stype() == coll_tpe) {
+            Ok(SColl {
+                values: coll,
+                provided_type: None,
+            })
+        } else {
+            Err(JsValue::from_str(
+                "SColl contained values of different types, all elements must be of the same type",
+            ))
+        }
     }
 
     /// Create an empty collection.
@@ -544,15 +561,6 @@ impl SColl {
             values: vec![],
             provided_type: Some(tpe.into()),
         })
-    }
-
-    #[wasm_bindgen(js_name = intoConstant)]
-    pub fn into_constant(self) -> Result<SConstant, JsValue> {
-        let inner: Constant = Value::from(Literal::from(self))
-            .try_into()
-            .map_err_js_value()?;
-
-        Ok(SConstant(inner))
     }
 
     #[wasm_bindgen(getter)]
@@ -616,6 +624,60 @@ impl From<CollKind<Literal>> for SColl {
     }
 }
 
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct STuple(Vec<SLiteral>);
+
+#[wasm_bindgen]
+impl STuple {
+    #[wasm_bindgen(constructor)]
+    pub fn new(a: &TsSLiteralType, b: &TsSLiteralType) -> Result<STuple, JsValue> {
+        Ok(STuple(vec![
+            (*a).to_owned().try_into()?,
+            (*b).to_owned().try_into()?,
+        ]))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> Array {
+        let arr = Array::new();
+
+        for v in self.0.iter() {
+            let js_value = JsValue::from(v.clone());
+            let literal = SLiteralLike::from(js_value);
+
+            arr.push(&literal.get_value());
+        }
+
+        arr
+    }
+}
+
+impl DynLiftIntoSType for STuple {
+    fn dyn_stype(&self) -> SType {
+        let types = self
+            .0
+            .iter()
+            .map(DynLiftIntoSType::dyn_stype)
+            .collect::<Vec<_>>();
+
+        // unwrap is safe, `STuple` can only be created with 2 elements
+        // which satisfies the bounded vec.
+        SType::STuple(types.try_into().unwrap())
+    }
+}
+
+impl From<STuple> for Literal {
+    fn from(v: STuple) -> Self {
+        let items: Vec<Literal> = v.0.into_iter().map(Into::into).collect();
+
+        // unwrap is safe, `STuple` can only be created with 2 elements
+        // which satisfies the bounded vec.
+        Literal::Tup(items.try_into().unwrap())
+    }
+}
+
 macro_rules! impl_literal_into_constant_method {
     ($($l:ident)*) => {$(
         #[wasm_bindgen]
@@ -634,3 +696,23 @@ macro_rules! impl_literal_into_constant_method {
 
 // Provide a method of `intoConstant` for each of the types with JS documentation
 impl_literal_into_constant_method!(SUnit SBoolean SByte SShort SInt SLong SBigInt SSigmaProp SGroupElement SErgoBox);
+
+macro_rules! impl_complex_literal_into_constant_method {
+    ($($l:ident)*) => {$(
+        #[wasm_bindgen]
+        impl $l {
+            /// Converts this literal into a {@link SConstant}.
+            /// This method consumes the class instance so it should not be used after calling.
+            #[wasm_bindgen(js_name = intoConstant)]
+            pub fn into_constant(self) -> Result<SConstant, JsValue> {
+                let inner: Constant = Value::from(Literal::from(self))
+                    .try_into()
+                    .map_err_js_value()?;
+
+                Ok(SConstant(inner))
+            }
+        }
+    )*};
+}
+
+impl_complex_literal_into_constant_method!(SColl STuple);
