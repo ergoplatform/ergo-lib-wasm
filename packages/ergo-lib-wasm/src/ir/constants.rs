@@ -505,7 +505,13 @@ impl TryFrom<&JsValue> for Box<SErgoBox> {
 #[derive(TryFromJsValue)]
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
-pub struct SColl(Vec<SLiteral>);
+pub struct SColl {
+    values: Vec<SLiteral>,
+    /// When creating a empty SColl we need the user to supply
+    /// the type of the collection otherwise there is no way
+    /// to determine it.
+    provided_type: Option<SType>,
+}
 
 #[wasm_bindgen]
 impl SColl {
@@ -513,8 +519,8 @@ impl SColl {
     pub fn new(js_coll: &TsSLiteralArrayType) -> Result<SColl, JsValue> {
         // TODO: should we validate the js array input?
         // I.e ensure the following:
-        //  - at least 1 element (?)
         //  - ensure all elements of same type
+        //  - must be at least 1 element
         let mut coll: Vec<SLiteral> = vec![];
         let arr = Array::from(js_coll);
 
@@ -522,7 +528,22 @@ impl SColl {
             coll.push(js.try_into()?)
         }
 
-        Ok(SColl(coll))
+        Ok(SColl {
+            values: coll,
+            provided_type: None,
+        })
+    }
+
+    /// Create an empty collection.
+    ///
+    /// When creating an empty collection we need the type of the collection
+    /// to be supplied because there is no way to determine it.
+    #[wasm_bindgen(js_name = emptyOfType)]
+    pub fn empty_of_type(tpe: &super::stype::SType) -> Result<SColl, JsValue> {
+        Ok(SColl {
+            values: vec![],
+            provided_type: Some(tpe.into()),
+        })
     }
 
     #[wasm_bindgen(js_name = intoConstant)]
@@ -538,7 +559,7 @@ impl SColl {
     pub fn value(&self) -> Array {
         let arr = Array::new();
 
-        for v in self.0.iter() {
+        for v in self.values.iter() {
             let js_value = JsValue::from(v.clone());
             let literal = SLiteralLike::from(js_value);
 
@@ -551,9 +572,11 @@ impl SColl {
 
 impl SColl {
     fn elem_tpe(&self) -> SType {
-        // when creating a `SColl` we should check that it is valid
-        // in the constructor so `unwrap()` is safe here
-        self.0.get(0).unwrap().dyn_stype()
+        if let Some(provided_tpe) = &self.provided_type {
+            provided_tpe.clone()
+        } else {
+            self.values.get(0).unwrap().dyn_stype()
+        }
     }
 }
 
@@ -566,7 +589,7 @@ impl DynLiftIntoSType for SColl {
 impl From<SColl> for Literal {
     fn from(value: SColl) -> Self {
         let items = value
-            .0
+            .values
             .iter()
             .map(|v| v.clone().into())
             .collect::<Vec<Literal>>();
@@ -586,7 +609,10 @@ impl From<CollKind<Literal>> for SColl {
             .map(SLiteral::from)
             .collect::<Vec<_>>();
 
-        Self(values)
+        Self {
+            values,
+            provided_type: None,
+        }
     }
 }
 
