@@ -14,6 +14,7 @@ import {
   SShort,
   SUnit,
   SType,
+  STuple,
 } from "../../";
 
 describe("Constants", () => {
@@ -173,6 +174,10 @@ describe("Constants", () => {
       [new SBigInt(4151222225125102098211n), 4151222225125102098211n],
       [SSigmaProp.fromBool(true), true],
       [SSigmaProp.fromBool(false), false],
+      [
+        new STuple(new SInt(5), new SBigInt(4151222225125102098211n)),
+        [5, 4151222225125102098211n],
+      ],
     ]).it(
       "should convert simple literal values to the correct JS value",
       (literal, value) => {
@@ -213,6 +218,35 @@ describe("Constants", () => {
       const coll = new SColl([nonEmptyColl, emptyColl]).intoConstant();
 
       expect(coll.typeStr).toBe("SColl(SColl(SByte))");
+    });
+    it("should throw if constructor array has less than 1 element", () => {
+      expect(() => new SColl([])).toThrow();
+    });
+    it("should throw if constructor array has elements of different types", () => {
+      expect(() => new SColl([new SInt(4), new SByte(1)])).toThrow();
+    });
+  });
+  describe("STuple", () => {
+    it("should handle complex pairs", () => {
+      const a = new SColl([
+        new STuple(
+          new SColl([new SByte(1), new SByte(2)]),
+          new STuple(new SInt(4), new SInt(5))
+        ),
+      ]);
+      const b = SColl.emptyOfType(
+        SType.tuple(
+          SType.coll(SType.byte()),
+          SType.tuple(SType.int(), SType.int())
+        )
+      );
+      const tuple = new STuple(a, b);
+      const constant = tuple.intoConstant();
+
+      expect(constant.typeStr).toBe(
+        "STuple([SColl(STuple([SColl(SByte), STuple([SInt, SInt])])), SColl(STuple([SColl(SByte), STuple([SInt, SInt])]))])"
+      );
+      expect(() => constant.toBytes()).not.toThrow();
     });
   });
 });

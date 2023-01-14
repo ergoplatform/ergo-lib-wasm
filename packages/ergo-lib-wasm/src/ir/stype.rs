@@ -62,4 +62,12 @@ impl SType {
 
         SType(inner)
     }
+
+    pub fn tuple(a: &SType, b: &SType) -> SType {
+        // unwrap is safe, explicitly using 2 elements, no chance of out-of-bounds for bounded vec.
+        let tuple = vec![a.into(), b.into()].try_into().unwrap();
+        let inner = stype::SType::STuple(tuple);
+
+        SType(inner)
+    }
 }
