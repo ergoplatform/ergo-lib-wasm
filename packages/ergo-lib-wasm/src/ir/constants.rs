@@ -694,8 +694,7 @@ pub struct SOption {
 #[wasm_bindgen]
 impl SOption {
     /// Creates an SOption instance.
-    /// If passed `undefined` it will create a empty option, otherwise
-    /// it will create a option containing the passed value.
+    /// If you need a `SOption` containing `None` use {@link SOption.noneOfType}.
     #[wasm_bindgen(constructor)]
     pub fn new(value: &TsSLiteralType) -> Result<SOption, JsValue> {
         let inner = (*value).to_owned().try_into()?;
