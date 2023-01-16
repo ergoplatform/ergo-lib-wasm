@@ -15,6 +15,7 @@ import {
   SUnit,
   SType,
   STuple,
+  SOption,
 } from "../../";
 
 describe("Constants", () => {
@@ -178,6 +179,8 @@ describe("Constants", () => {
         new STuple(new SInt(5), new SBigInt(4151222225125102098211n)),
         [5, 4151222225125102098211n],
       ],
+      [new SOption(new SBoolean(true)), true],
+      [SOption.noneOfType(SType.boolean()), undefined],
     ]).it(
       "should convert simple literal values to the correct JS value",
       (literal, value) => {
@@ -247,6 +250,13 @@ describe("Constants", () => {
         "STuple([SColl(STuple([SColl(SByte), STuple([SInt, SInt])])), SColl(STuple([SColl(SByte), STuple([SInt, SInt])]))])"
       );
       expect(() => constant.toBytes()).not.toThrow();
+    });
+  });
+  describe("SOption", () => {
+    it("should convert to a SConstant", () => {
+      const val = new SOption(new SByte(1));
+
+      expect(() => val.intoConstant()).not.toThrow();
     });
   });
 });
