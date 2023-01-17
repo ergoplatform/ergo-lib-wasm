@@ -38,12 +38,12 @@ trait DynLiftIntoSType {
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(
-        typescript_type = "SBoolean | SByte | SShort | SInt | SLong | SBigInt | SSigmaProp | SGroupElement | SErgoBox | SColl"
+        typescript_type = "SBoolean | SByte | SShort | SInt | SLong | SBigInt | SSigmaProp | SGroupElement | SErgoBox | SColl | STuple | SOption"
     )]
     pub type TsSLiteralType;
 
     #[wasm_bindgen(
-        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] | SErgoBox[] | SColl[]"
+        typescript_type = "SBoolean[] | SByte[] | SShort[] | SInt[] | SLong[] | SBigInt[] | SSigmaProp[] | SGroupElement[] | SErgoBox[] | SColl[] | STuple[] | SOption[]"
     )]
     pub type TsSLiteralArrayType;
 
@@ -150,6 +150,7 @@ pub enum SLiteral {
     ErgoBox(Box<SErgoBox>),
     Coll(SColl),
     Tuple(STuple),
+    Option(SOption),
 }
 
 impl DynLiftIntoSType for SLiteral {
@@ -167,6 +168,7 @@ impl DynLiftIntoSType for SLiteral {
             SLiteral::ErgoBox(_) => SType::SBox,
             SLiteral::Coll(v) => v.dyn_stype(),
             SLiteral::Tuple(v) => v.dyn_stype(),
+            SLiteral::Option(v) => v.dyn_stype(),
         }
     }
 }
@@ -191,6 +193,7 @@ impl TryFrom<JsValue> for SLiteral {
             "SErgoBox" => Ok(SLiteral::ErgoBox(vref.try_into()?)),
             "SColl" => Ok(SLiteral::Coll(vref.try_into()?)),
             "STuple" => Ok(SLiteral::Tuple(vref.try_into()?)),
+            "SOption" => Ok(SLiteral::Option(vref.try_into()?)),
             _ => Err(format!("SLiteral: unknown class '{}'", object_classname).into()),
         }
     }
@@ -211,6 +214,7 @@ impl From<SLiteral> for JsValue {
             SLiteral::ErgoBox(v) => (*v).into(),
             SLiteral::Coll(v) => v.into(),
             SLiteral::Tuple(v) => v.into(),
+            SLiteral::Option(v) => v.into(),
         }
     }
 }
@@ -230,6 +234,7 @@ impl From<SLiteral> for Literal {
             SLiteral::ErgoBox(v) => (*v).into(),
             SLiteral::Coll(v) => v.into(),
             SLiteral::Tuple(v) => v.into(),
+            SLiteral::Option(v) => v.into(),
         }
     }
 }
@@ -678,6 +683,78 @@ impl From<STuple> for Literal {
     }
 }
 
+#[derive(TryFromJsValue)]
+#[wasm_bindgen]
+#[derive(Debug, Clone)]
+pub struct SOption {
+    value: Box<Option<SLiteral>>,
+    provided_type: Option<SType>,
+}
+
+#[wasm_bindgen]
+impl SOption {
+    /// Creates an SOption instance.
+    /// If you need a `SOption` containing `None` use {@link SOption.noneOfType}.
+    #[wasm_bindgen(constructor)]
+    pub fn new(value: &TsSLiteralType) -> Result<SOption, JsValue> {
+        let inner = (*value).to_owned().try_into()?;
+
+        Ok(SOption {
+            value: Box::new(Some(inner)),
+            provided_type: None,
+        })
+    }
+
+    #[wasm_bindgen(js_name = noneOfType)]
+    pub fn none_of_type(tpe: &super::stype::SType) -> Result<SOption, JsValue> {
+        Ok(SOption {
+            value: Box::new(None),
+            provided_type: Some(tpe.into()),
+        })
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn value(&self) -> JsValue {
+        if let Some(v) = self.value.as_ref() {
+            let js_value = JsValue::from(v.clone());
+            let literal = SLiteralLike::from(js_value);
+
+            literal.get_value()
+        } else {
+            JsValue::UNDEFINED
+        }
+    }
+}
+
+impl SOption {
+    fn elem_tpe(&self) -> SType {
+        if let Some(provided_tpe) = &self.provided_type {
+            provided_tpe.clone()
+        } else {
+            let inner = self.value.as_ref();
+
+            // unwrap should be safe, it shouldn't be possible to create
+            // an instance where provided_tpe is `None` and self.value is also `None`.
+            inner.as_ref().unwrap().dyn_stype()
+        }
+    }
+}
+
+impl DynLiftIntoSType for SOption {
+    fn dyn_stype(&self) -> SType {
+        SType::SOption(Box::new(self.elem_tpe()))
+    }
+}
+
+impl From<SOption> for Literal {
+    fn from(opt: SOption) -> Self {
+        let inner = opt.value;
+        let value = (*inner).map(Into::into);
+
+        Literal::Opt(Box::new(value))
+    }
+}
+
 macro_rules! impl_literal_into_constant_method {
     ($($l:ident)*) => {$(
         #[wasm_bindgen]
@@ -715,4 +792,4 @@ macro_rules! impl_complex_literal_into_constant_method {
     )*};
 }
 
-impl_complex_literal_into_constant_method!(SColl STuple);
+impl_complex_literal_into_constant_method!(SColl STuple SOption);
