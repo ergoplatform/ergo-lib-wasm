@@ -1,0 +1,18 @@
+[package]
+name = "scorex-buffer"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+crate_type = ["cdylib"]
+
+[profile.release]
+codegen-units = 1
+incremental = true
+lto = true
+opt-level = "z"
+
+[dependencies]
+wasm-bindgen = "0.2.83"
+sigma-ser = "0.11.0"
+js-sys = "0.3.60"
