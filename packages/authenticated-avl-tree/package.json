@@ -1,0 +1,24 @@
+{
+  "name": "@ergoplatform/authenticated-avl-tree",
+  "version": "0.1.0",
+  "description": "Authenticated AVL tree library",
+  "scripts": {
+    "build": "npm run build:node && npm run build:esm && npm run build:browser",
+    "build:esm": "wasm-pack build --target bundler --release --out-dir dist/esm",
+    "build:node": "wasm-pack build --target nodejs --release --out-dir dist/node",
+    "build:browser": "wasm-pack build --target web --release --out-dir dist/browser"
+  },
+  "files": [
+    "dist/**/*",
+    "!dist/**/.gitignore",
+    "!dist/**/package.json",
+    "!dist/**/README.md",
+    "package.json",
+    "README.md"
+  ],
+  "main": "dist/node/authenticated_avl_tree.js",
+  "module": "dist/esm/authenticated_avl_tree.js",
+  "types": "dist/node/authenticated_avl_tree.d.ts",
+  "sideEffects": false,
+  "license": "CC0-1.0"
+}
