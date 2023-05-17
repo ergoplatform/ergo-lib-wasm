@@ -39,7 +39,7 @@ impl BatchAVLProver {
     /// Generates the proof for all the operations performed (except the ones that failed)
     /// since the last {@link BatchAVLProver.generateProof} call.
     #[wasm_bindgen(js_name = generateProof)]
-    pub fn generate_proof(&mut self) -> Uint8Array {
-        self.0.generate_proof().to_vec().as_slice().into()
+    pub fn generate_proof(&mut self) -> Box<[u8]> {
+        self.0.generate_proof().to_vec().into_boxed_slice()
     }
 }
