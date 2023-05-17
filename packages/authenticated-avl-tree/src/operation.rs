@@ -13,8 +13,8 @@ extern "C" {
     pub type TsOperationType;
 }
 
-#[derive(Debug, Clone)]
-pub(crate) enum Operation {
+#[derive(Debug, Clone, From)]
+pub enum Operation {
     Lookup(LookupOperation),
     Insert(InsertOperation),
     Remove(RemoveOperation),
@@ -45,6 +45,17 @@ impl TryFrom<JsValue> for Operation {
             "RemoveOperation" => Ok(Operation::Remove(vref.try_into()?)),
             "UpdateOperation" => Ok(Operation::Update(vref.try_into()?)),
             _ => Err(format!("Operation: unknown class '{}'", object_classname).into()),
+        }
+    }
+}
+
+impl From<Operation> for JsValue {
+    fn from(value: Operation) -> Self {
+        match value {
+            Operation::Lookup(o) => o.into(),
+            Operation::Insert(o) => o.into(),
+            Operation::Remove(o) => o.into(),
+            Operation::Update(o) => o.into(),
         }
     }
 }
@@ -110,3 +121,33 @@ impl UpdateOperation {
         UpdateOperation(NativeOperation::Update(kv))
     }
 }
+
+macro_rules! impl_key_method {
+    ($($l:ident)*) => {$(
+        #[wasm_bindgen]
+        impl $l {
+            /// The key of the operation.
+            #[wasm_bindgen(getter)]
+            pub fn key(self) -> Box<[u8]> {
+                self.0.key().to_vec().into_boxed_slice()
+            }
+        }
+    )*};
+}
+
+impl_key_method!(InsertOperation RemoveOperation UpdateOperation LookupOperation);
+
+macro_rules! impl_value_method {
+    ($($l:ident)*) => {$(
+        #[wasm_bindgen]
+        impl $l {
+            /// The value of the operation.
+            #[wasm_bindgen(getter)]
+            pub fn value(self) -> Option<Box<[u8]>> {
+                self.0.value().map(|b| b.to_vec().into_boxed_slice())
+            }
+        }
+    )*};
+}
+
+impl_value_method!(InsertOperation UpdateOperation);

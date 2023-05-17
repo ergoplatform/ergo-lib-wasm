@@ -6,7 +6,8 @@
     "build": "npm run build:node && npm run build:esm && npm run build:browser",
     "build:esm": "wasm-pack build --target bundler --release --out-dir dist/esm",
     "build:node": "wasm-pack build --target nodejs --release --out-dir dist/node",
-    "build:browser": "wasm-pack build --target web --release --out-dir dist/browser"
+    "build:browser": "wasm-pack build --target web --release --out-dir dist/browser",
+    "test:wasm": "wasm-pack test --node"
   },
   "files": [
     "dist/**/*",
