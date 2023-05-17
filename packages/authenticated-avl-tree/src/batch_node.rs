@@ -11,7 +11,7 @@ impl AVLTree {
     #[wasm_bindgen(constructor)]
     pub fn new(key_length: usize, value_length: Option<usize>) -> AVLTree {
         AVLTree(NativeAVLTree::new(
-            |digest| Node::LabelOnly(NodeHeader::new(Some(digest.clone()), None)),
+            |digest| Node::LabelOnly(NodeHeader::new(Some(*digest), None)),
             key_length,
             value_length,
         ))
