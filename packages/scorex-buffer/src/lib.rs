@@ -5,6 +5,8 @@ use js_sys::Uint8Array;
 use sigma_ser::vlq_encode::{ReadSigmaVlqExt, WriteSigmaVlqExt};
 use wasm_bindgen::prelude::*;
 
+ergo_lib_utils::impl_set_console_panic_hook_fn!();
+
 #[wasm_bindgen]
 pub struct ScorexWriter(Vec<u8>);
 

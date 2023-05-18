@@ -11,3 +11,4 @@ wasm-bindgen = "0.2.83"
 sigma-ser = "0.11.0"
 js-sys = "0.3.60"
 ergo-lib-utils = { path = "../ergo-lib-utils" }
+console_error_panic_hook = "0.1.7"

@@ -19,3 +19,5 @@ pub mod prelude {
     pub use crate::traits::{MapJsValueErrorResult, TryJsArrayToVec, TryVecToJsArray};
     pub use crate::{impl_json_methods, impl_try_js_array_to_vec, impl_try_vec_to_js_array};
 }
+
+ergo_lib_utils::impl_set_console_panic_hook_fn!();
