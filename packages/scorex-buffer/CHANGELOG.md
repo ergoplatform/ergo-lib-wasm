@@ -1,5 +1,11 @@
 # @ergoplatform/scorex-buffer
 
+## 1.0.3
+
+### Patch Changes
+
+- ed3a0cb: update repository field in package.json
+
 ## 1.0.2
 
 ### Patch Changes

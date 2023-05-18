@@ -1,5 +1,11 @@
 # @ergoplatform/ergo-lib-wasm
 
+## 0.1.3
+
+### Patch Changes
+
+- ed3a0cb: update repository field in package.json
+
 ## 0.1.2
 
 ### Patch Changes
