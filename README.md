@@ -26,3 +26,4 @@ This repository contains a few utility crates that are used throughout the repos
 | Crate | Description |
 | --- | --- |
 | [`ergo-wasm-derive`](packages/ergo-wasm-derive) | Macros providing workarounds to [`wasm-bindgen`](https://github.com/rustwasm/wasm-bindgen) limitations. I.e working with arrays of WASM structs |
+| [`ergo-lib-utils`](packages/ergo-lib-utils) | Common utility functions and traits |

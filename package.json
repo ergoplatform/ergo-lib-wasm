@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "JS & WASM bindings to the ergo-lib rust library",
   "scripts": {
-    "build": "yarn workspace @ergoplatform/ergo-lib-wasm build && yarn workspace @ergoplatform/scorex-buffer build",
+    "build": "yarn workspace @ergoplatform/ergo-lib-wasm build && yarn workspace @ergoplatform/scorex-buffer build && yarn workspace @ergoplatform/authenticated-avl-tree build",
     "pkg-version": "changeset version",
     "release": "yarn build && changeset publish",
     "test": "yarn jest"
