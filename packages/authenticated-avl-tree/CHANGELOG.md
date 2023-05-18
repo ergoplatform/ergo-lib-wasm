@@ -1,5 +1,11 @@
 # @ergoplatform/authenticated-avl-tree
 
+## 0.2.1
+
+### Patch Changes
+
+- 900eff6: add `__setConsolePanicHook` function to provide more detailed stack traces in the event of errors originating from WASM code
+
 ## 0.2.0
 
 ### Minor Changes
