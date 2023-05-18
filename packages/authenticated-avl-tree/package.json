@@ -21,9 +21,6 @@
   "module": "dist/esm/authenticated_avl_tree.js",
   "types": "dist/node/authenticated_avl_tree.d.ts",
   "sideEffects": false,
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ergoplatform/ergo-lib-wasm.git"
-  },
+  "repository": "ergoplatform/ergo-lib-wasm",
   "license": "CC0-1.0"
 }
