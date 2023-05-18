@@ -20,5 +20,9 @@
   "module": "dist/esm/scorex_buffer.js",
   "types": "dist/node/scorex_buffer.d.ts",
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ergoplatform/ergo-lib-wasm.git"
+  },
   "license": "CC0-1.0"
 }

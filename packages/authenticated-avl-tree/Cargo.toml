@@ -16,7 +16,7 @@ ergo-lib-utils = { path = "../ergo-lib-utils" }
 getrandom = { version = "0.2.9", features = ["js"] }
 bytes = { version = "1.0.1" }
 base16 = "0.2.1"
-
+console_error_panic_hook = "0.1.7"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"
