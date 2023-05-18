@@ -1,5 +1,11 @@
 # @ergoplatform/authenticated-avl-tree
 
+## 0.2.2
+
+### Patch Changes
+
+- ed3a0cb: update repository field in package.json
+
 ## 0.2.1
 
 ### Patch Changes
