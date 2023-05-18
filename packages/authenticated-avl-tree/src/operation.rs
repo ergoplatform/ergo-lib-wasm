@@ -1,5 +1,5 @@
 use derive_more::{From, Into};
-use ergo_lib_utils::extract_classname;
+use ergo_lib_utils::{extract_classname, MapJsValueErrorResult};
 use ergo_wasm_derive::TryFromJsValue;
 use js_sys::Uint8Array;
 use scorex_crypto_avltree::operation::{KeyValue, Operation as NativeOperation};
@@ -71,6 +71,14 @@ impl LookupOperation {
     pub fn new(key: Uint8Array) -> LookupOperation {
         LookupOperation(NativeOperation::Lookup(key.to_vec().into()))
     }
+
+    /// Create instance using hex encoded strings.
+    #[wasm_bindgen(js_name = fromHex)]
+    pub fn from_hex(key: &str) -> Result<LookupOperation, JsValue> {
+        Ok(LookupOperation(NativeOperation::Lookup(
+            base16::decode(key).map_err_js_value()?.into(),
+        )))
+    }
 }
 
 #[derive(TryFromJsValue)]
@@ -89,6 +97,17 @@ impl InsertOperation {
 
         InsertOperation(NativeOperation::Insert(kv))
     }
+
+    /// Create instance using hex encoded strings.
+    #[wasm_bindgen(js_name = fromHex)]
+    pub fn from_hex(key: &str, value: &str) -> Result<InsertOperation, JsValue> {
+        let kv = KeyValue {
+            key: base16::decode(key).unwrap().into(),
+            value: base16::decode(value).map_err_js_value()?.into(),
+        };
+
+        Ok(InsertOperation(NativeOperation::Insert(kv)))
+    }
 }
 
 #[derive(TryFromJsValue)]
@@ -101,6 +120,14 @@ impl RemoveOperation {
     #[wasm_bindgen(constructor)]
     pub fn new(key: Uint8Array) -> RemoveOperation {
         RemoveOperation(NativeOperation::Remove(key.to_vec().into()))
+    }
+
+    /// Create instance using hex encoded strings.
+    #[wasm_bindgen(js_name = fromHex)]
+    pub fn from_hex(key: &str) -> Result<RemoveOperation, JsValue> {
+        Ok(RemoveOperation(NativeOperation::Remove(
+            base16::decode(key).unwrap().into(),
+        )))
     }
 }
 
@@ -119,6 +146,17 @@ impl UpdateOperation {
         };
 
         UpdateOperation(NativeOperation::Update(kv))
+    }
+
+    /// Create instance using hex encoded strings.
+    #[wasm_bindgen(js_name = fromHex)]
+    pub fn from_hex(key: &str, value: &str) -> Result<UpdateOperation, JsValue> {
+        let kv = KeyValue {
+            key: base16::decode(key).map_err_js_value()?.into(),
+            value: base16::decode(value).map_err_js_value()?.into(),
+        };
+
+        Ok(UpdateOperation(NativeOperation::Update(kv)))
     }
 }
 

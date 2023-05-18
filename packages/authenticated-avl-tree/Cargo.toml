@@ -15,10 +15,10 @@ ergo-wasm-derive = { path = "../ergo-wasm-derive" }
 ergo-lib-utils = { path = "../ergo-lib-utils" }
 getrandom = { version = "0.2.9", features = ["js"] }
 bytes = { version = "1.0.1" }
+base16 = "0.2.1"
 
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"
 web-sys = "0.3.63"
 wasm-logger = "0.2.0"
-base16 = "0.2.1"
