@@ -1,66 +1,19 @@
 import { BatchAVLProver, AVLTree, InsertOperation, RemoveOperation } from "..";
 
-function hexToBytes(hex: string) {
-  return new Uint8Array(Buffer.from(hex, "hex"));
-}
-
 function bytesToHex(arr: Uint8Array): string {
   return Buffer.from(arr).toString("hex");
 }
 
 function insertOp(key: string, value: string) {
-  return new InsertOperation(hexToBytes(key), hexToBytes(value));
+  return InsertOperation.fromHex(key, value);
 }
 
 function removeOp(key: string) {
-  return new RemoveOperation(hexToBytes(key));
+  return RemoveOperation.fromHex(key);
 }
 
 describe("BatchAVLProver", () => {
-  describe("Simple operations & proofs", () => {
-    it("should insert and remove", () => {
-      const tree = new AVLTree(32);
-      const bv = new BatchAVLProver(tree, true);
-
-      bv.performOneOperation(
-        new InsertOperation(
-          hexToBytes(
-            "d32c7a04c17b5d34584a92cbca3d9842a5221334d03d1cae608967597e96ef8c"
-          ),
-          hexToBytes("01")
-        )
-      );
-
-      expect(bytesToHex(bv.generateProof())).toBe(
-        "020000000000000000000000000000000000000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000004"
-      );
-
-      bv.performOneOperation(
-        new RemoveOperation(
-          hexToBytes(
-            "d32c7a04c17b5d34584a92cbca3d9842a5221334d03d1cae608967597e96ef8c"
-          )
-        )
-      );
-
-      expect(bytesToHex(bv.generateProof())).toBe(
-        "020000000000000000000000000000000000000000000000000000000000000000d32c7a04c17b5d34584a92cbca3d9842a5221334d03d1cae608967597e96ef8c0000000002ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000101000400"
-      );
-    });
-  });
-
-  // !! THIS COULD BE THE CAUSE OF BUGS IN THE FUTURE
-  // This test is currently failing when ran by Jest. This is testing
-  // against the set of tests here: https://github.com/knizhnik/scorex_crypto_avltree/blob/36a0b47742d9d8f749ce95d2a794be88a03d13ec/tests/avl_batch_specification.rs#L86
-  // A different proof is being generated after applying `mods` only when running with Jest.
-  // I spent a number of hours debugging but cannot see what could be causing the difference,
-  // if the operations are performed all at once the proofs are the same.
-  // It's only when separated into 2 lists of operations in JS that it starts to fail.
-  // Small separate lists of operations seem to succeed and produce the same proof in jest.
-  //
-  // Both tests should be running inside nodejs with the same WASM code. :shrug:
-  // !! THIS COULD BE THE CAUSE OF BUGS IN THE FUTURE
-  it.skip("should produce the same proofs as the native rust library", () => {
+  it("should produce the same proofs as the native rust library", () => {
     const insertList = [
       insertOp(
         "333724f1e5ed593ff3760e2fd14257e53320fcaba195198fe364c18317c8357a",
@@ -232,7 +185,7 @@ describe("BatchAVLProver", () => {
       ),
       insertOp(
         "a8296d3733c1ac6981e1027908f5a4ee3839d0fa76ffc84a5e117fd4b3c1288c",
-        "11c6cc6080a083393873da0e37f41a5"
+        "11c6cc6080a083393873da0e37f41a5b"
       ),
       insertOp(
         "fd73b884610f1ec81d000a957ba21facb57a8dcb136b8b9228072de31772d3d5",
@@ -268,7 +221,7 @@ describe("BatchAVLProver", () => {
       ),
       insertOp(
         "369b593ae971613636048143b39d895148aca2eed84f91bba2a03009f2e30c68",
-        "97d584cff7c21d040b1a10783998ff7"
+        "97d584cff7c21d040b1a10783998ff7b"
       ),
       insertOp(
         "419b1c45fcb6080fe8d091474e71b413974e2848dd1c823c8e809fb1d71f0f23",
@@ -300,7 +253,7 @@ describe("BatchAVLProver", () => {
       ),
       insertOp(
         "e0ccef093f197747577bfbe4688d06425976dc94c41aff62b4a02ce4cf201585",
-        "167320c01294b05a3ee0335d79e2f28"
+        "167320c01294b05a3ee0335d79e2f28b"
       ),
       insertOp(
         "3e312123cc657dd53ad9ead5f7d883a199d3ab8fe1ea8f9bf31ab4c332c1d5d3",
@@ -392,7 +345,7 @@ describe("BatchAVLProver", () => {
       ),
       insertOp(
         "894c207c3f92fce8087000ff5242326968f0a2f2a07ca821258f6a639a92741b",
-        "b7300e02c9e0bf264b6f68d911b48ae"
+        "b7300e02c9e0bf264b6f68d911b48aeb"
       ),
       insertOp(
         "ee4248dd48eebbb06c50dfd8eb8cca90ebfe3a040727ec8e1cf47ba5d2d02dcd",

@@ -102,7 +102,7 @@ impl InsertOperation {
     #[wasm_bindgen(js_name = fromHex)]
     pub fn from_hex(key: &str, value: &str) -> Result<InsertOperation, JsValue> {
         let kv = KeyValue {
-            key: base16::decode(key).unwrap().into(),
+            key: base16::decode(key).map_err_js_value()?.into(),
             value: base16::decode(value).map_err_js_value()?.into(),
         };
 
@@ -126,7 +126,7 @@ impl RemoveOperation {
     #[wasm_bindgen(js_name = fromHex)]
     pub fn from_hex(key: &str) -> Result<RemoveOperation, JsValue> {
         Ok(RemoveOperation(NativeOperation::Remove(
-            base16::decode(key).unwrap().into(),
+            base16::decode(key).map_err_js_value()?.into(),
         )))
     }
 }
