@@ -1,5 +1,11 @@
 # @ergoplatform/authenticated-avl-tree
 
+## 0.2.3
+
+### Patch Changes
+
+- a90590d: Fix missing `sideEffect` causing ESM module WASM to break
+
 ## 0.2.2
 
 ### Patch Changes

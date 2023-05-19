@@ -1,5 +1,11 @@
 # @ergoplatform/ergo-lib-wasm
 
+## 0.1.4
+
+### Patch Changes
+
+- a90590d: Fix missing `sideEffect` causing ESM module WASM to break
+
 ## 0.1.3
 
 ### Patch Changes
