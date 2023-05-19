@@ -1,5 +1,11 @@
 # @ergoplatform/scorex-buffer
 
+## 1.0.4
+
+### Patch Changes
+
+- a90590d: Fix missing `sideEffect` causing ESM module WASM to break
+
 ## 1.0.3
 
 ### Patch Changes

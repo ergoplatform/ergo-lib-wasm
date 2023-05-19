@@ -1,6 +1,6 @@
 {
   "name": "@ergoplatform/authenticated-avl-tree",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Authenticated AVL tree library",
   "scripts": {
     "build": "npm run build:node && npm run build:esm && npm run build:browser",
