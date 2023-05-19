@@ -19,7 +19,10 @@
   "main": "dist/node/scorex_buffer.js",
   "module": "dist/esm/scorex_buffer.js",
   "types": "dist/node/scorex_buffer.d.ts",
-  "sideEffects": false,
+  "sideEffects": [
+    "dist/esm/scorex_buffer.js",
+    "dist/esm/snippets/*"
+  ],
   "repository": "ergoplatform/ergo-lib-wasm",
   "license": "CC0-1.0"
 }
