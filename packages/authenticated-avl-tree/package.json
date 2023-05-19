@@ -21,7 +21,8 @@
   "module": "dist/esm/authenticated_avl_tree.js",
   "types": "dist/node/authenticated_avl_tree.d.ts",
   "sideEffects": [
-    "dist/esm/authenticated_avl_tree.js"
+    "dist/esm/authenticated_avl_tree.js",
+    "dist/esm/snippets/*"
   ],
   "repository": "ergoplatform/ergo-lib-wasm",
   "license": "CC0-1.0"
