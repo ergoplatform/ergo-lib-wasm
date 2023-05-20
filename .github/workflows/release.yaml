@@ -19,10 +19,10 @@ jobs:
           toolchain: stable
       - name: Install wasm-pack
         run: cargo install wasm-pack
-      - name: Setup Node.js 18.x
+      - name: Setup Node.js 16.x
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: 16.x
       - name: Install Dependencies
         run: yarn --frozen-lockfile
       - name: Build
