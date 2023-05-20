@@ -1,6 +1,6 @@
 {
   "name": "@ergoplatform/scorex-buffer",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Cursor based Reader and Writer using encoding of Scorex based networks like Ergo.",
   "scripts": {
     "build": "npm run build:node && npm run build:esm && npm run build:browser",

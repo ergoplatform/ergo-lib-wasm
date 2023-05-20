@@ -1,5 +1,11 @@
 # @ergoplatform/scorex-buffer
 
+## 1.0.5
+
+### Patch Changes
+
+- 08d3b18: bump patch to fix previously broken publish
+
 ## 1.0.4
 
 ### Patch Changes
