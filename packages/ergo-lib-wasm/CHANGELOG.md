@@ -1,5 +1,11 @@
 # @ergoplatform/ergo-lib-wasm
 
+## 0.1.5
+
+### Patch Changes
+
+- 08d3b18: bump patch to fix previously broken publish
+
 ## 0.1.4
 
 ### Patch Changes

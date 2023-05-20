@@ -1,5 +1,11 @@
 # @ergoplatform/authenticated-avl-tree
 
+## 0.2.4
+
+### Patch Changes
+
+- 08d3b18: bump patch to fix previously broken publish
+
 ## 0.2.3
 
 ### Patch Changes
