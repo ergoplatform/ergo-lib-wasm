@@ -19,6 +19,10 @@ The following functionality has been migrated:
 | Addresses | ✅
 | ErgoTree | ✅
 
+### authenticated-avl-tree
+
+Low level AVL+ tree library for interacting with trees off-chain.
+
 ### Internal Crates
 
 This repository contains a few utility crates that are used throughout the repository but are not published.
