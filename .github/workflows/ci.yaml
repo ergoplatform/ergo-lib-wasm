@@ -6,15 +6,17 @@ on:
       - main
 
 jobs:
-  lint:
-    name: Lint
+  test-and-lint:
+    name: Unit Test and Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repo
+        uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           components: clippy, rustfmt
           override: true
+          toolchain: stable
       - uses: actions/cache@v3
         with:
           path: |
@@ -34,24 +36,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install wasm-pack
         run: cargo install wasm-pack
       - name: Setup Node.js 16.x
