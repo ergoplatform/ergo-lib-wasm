@@ -37,7 +37,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features
       - name: Install wasm-pack
-        run: cargo install wasm-pack
+        run: cargo install wasm-pack || true # exits with a error code if wasm-pack is already installed
       - name: Setup Node.js 16.x
         uses: actions/setup-node@v3
         with:
