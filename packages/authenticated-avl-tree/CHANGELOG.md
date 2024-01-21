@@ -1,5 +1,11 @@
 # @ergoplatform/authenticated-avl-tree
 
+## 0.3.0
+
+### Minor Changes
+
+- e151d07: Migrate to Ergo Platform maintained AVL tree library
+
 ## 0.2.4
 
 ### Patch Changes
