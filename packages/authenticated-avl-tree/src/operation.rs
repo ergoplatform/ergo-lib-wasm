@@ -1,8 +1,8 @@
 use derive_more::{From, Into};
+use ergo_avltree_rust::operation::{KeyValue, Operation as NativeOperation};
 use ergo_lib_utils::{extract_classname, MapJsValueErrorResult};
 use ergo_wasm_derive::TryFromJsValue;
 use js_sys::Uint8Array;
-use ergo_avltree_rust::operation::{KeyValue, Operation as NativeOperation};
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
 #[wasm_bindgen]
