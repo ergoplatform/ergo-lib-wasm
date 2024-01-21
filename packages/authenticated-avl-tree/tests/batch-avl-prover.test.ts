@@ -13,6 +13,16 @@ function removeOp(key: string) {
 }
 
 describe("BatchAVLProver", () => {
+  it("should return the expected empty digest", () => {
+    const tree = new AVLTree(32);
+    const bv = new BatchAVLProver(tree, true);
+    const actualDigest = bytesToHex(bv.digest());
+
+    expect(actualDigest).toBe(
+      "4ec61f485b98eb87153f7c57db4f5ecd75556fddbc403b41acf8441fde8e160900"
+    );
+  });
+
   it("should produce the same proofs as the native rust library", () => {
     const insertList = [
       insertOp(

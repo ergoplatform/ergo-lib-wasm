@@ -1,6 +1,7 @@
 use crate::batch_node::AVLTree;
 use crate::operation::{Operation, TsOperationType};
 use derive_more::{From, Into};
+use ergo_avltree_rust::authenticated_tree_ops::AuthenticatedTreeOps;
 use ergo_avltree_rust::batch_avl_prover::BatchAVLProver as NativeBatchAVLProver;
 use ergo_lib_utils::MapJsValueErrorResult;
 use js_sys::Uint8Array;
@@ -40,5 +41,11 @@ impl BatchAVLProver {
     #[wasm_bindgen(js_name = generateProof)]
     pub fn generate_proof(&mut self) -> Box<[u8]> {
         self.0.generate_proof().to_vec().into_boxed_slice()
+    }
+
+    pub fn digest(&self) -> JsValue {
+        self.0.digest().map_or(JsValue::UNDEFINED, |digest| {
+            Uint8Array::from(digest.to_vec().as_slice()).into()
+        })
     }
 }
