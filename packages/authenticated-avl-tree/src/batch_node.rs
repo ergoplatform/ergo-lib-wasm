@@ -1,5 +1,5 @@
 use derive_more::{From, Into};
-use scorex_crypto_avltree::batch_node::{AVLTree as NativeAVLTree, Node, NodeHeader};
+use ergo_avltree_rust::batch_node::{AVLTree as NativeAVLTree, Node, NodeHeader};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
