@@ -10,6 +10,7 @@ crate_type = ["cdylib", "rlib"]
 wasm-bindgen = "0.2.83"
 js-sys = "0.3.60"
 scorex_crypto_avltree = "0.1.0"
+ergo_avltree_rust = { git = "https://github.com/ergoplatform/ergo_avltree_rust.git" }
 derive_more = "0.99.17"
 ergo-wasm-derive = { path = "../ergo-wasm-derive" }
 ergo-lib-utils = { path = "../ergo-lib-utils" }

@@ -1,9 +1,9 @@
 use crate::batch_node::AVLTree;
 use crate::operation::{Operation, TsOperationType};
 use derive_more::{From, Into};
+use ergo_avltree_rust::batch_avl_prover::BatchAVLProver as NativeBatchAVLProver;
 use ergo_lib_utils::MapJsValueErrorResult;
 use js_sys::Uint8Array;
-use scorex_crypto_avltree::batch_avl_prover::BatchAVLProver as NativeBatchAVLProver;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
