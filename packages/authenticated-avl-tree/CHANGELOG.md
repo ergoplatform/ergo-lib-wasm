@@ -1,5 +1,11 @@
 # @ergoplatform/authenticated-avl-tree
 
+## 0.3.1
+
+### Patch Changes
+
+- 51fa2e9: Add `BatchAVLProver.digest()` method
+
 ## 0.3.0
 
 ### Minor Changes
